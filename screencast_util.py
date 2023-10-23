@@ -21,8 +21,9 @@ import subprocess
 import configparser
 import pkg_resources
 from Colors import Colors
-from mbox import MessageBox
+# from mbox import MessageBox
 from typing import Callable, TextIO
+import vlc  # python-vlc
 
 # Filetype definitions
 supported = ['.mp3', '.m4a', '.mp4', '.mpeg', '.mpga', '.opus', '.ts', '.voc', '.w64', '.wav',
@@ -88,15 +89,16 @@ def check_install(platform, pure_python=True):
             pip_help(platform)
 
         # ffmpeg help:
-        if not have_ffmpeg or\
-                (platform == 'Windows' and not have_ffmpeg_windows):
+        if platform == 'Windows':
+            if not have_ffmpeg_windows:
+                screencast_help(platform, have_ffmpeg, have_ffmpeg_windows)
+        elif not have_ffmpeg:
             screencast_help(platform, have_ffmpeg, have_ffmpeg_windows)
 
         # All good
         # #########Interim don't worry about macOS
         # If we have_python and have_pip and have_whisper and have_ffmpeg:
-        if have_python and have_pip and have_ffmpeg and \
-                (platform != 'Windows' or have_ffmpeg_windows):
+        if have_python and have_pip and (have_ffmpeg or (platform == 'Windows' and have_ffmpeg_windows)):
             return 0
         else:
             return -1
@@ -202,17 +204,19 @@ def configurator(filepath):
 
 
 # Open text file in editor
-def display_result(txt_path, platform, silent, conversation=False):
+def display_result(output_file, platform, silent, conversation=False):
 
     if silent is False:
         if platform == 'Darwin':
-            subprocess.Popen(['open', '-a', 'TextEdit', txt_path])
+            subprocess.Popen(['open', '-a', 'TextEdit', output_file])
         if platform == 'Linux':
-            subprocess.Popen(['gedit', txt_path])
+            subprocess.Popen(['gedit', output_file])
         elif platform == 'Windows':
-            subprocess.Popen(['notepad', txt_path])
+            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
+            # media = vlc.MediaPlayer(output_file)
+            # media.play()
     else:
-        print('Results in', txt_path)
+        print('Results in', output_file)
 
 
 # Define output write, e.g. 'file.txt'
@@ -368,7 +372,7 @@ def overwrite_query(msg, b1=('yes', 'yes'), b2=('no', 'no'), b3=('all', 'all'), 
     t = time in seconds (int or float) until the msgbox automatically closes
     entry = include an entry widget that will have its contents returned: True or False
     """
-    msgbox = MessageBox(msg, b1, b2, b3, b4, b5, frame_, t, entry)
+    # msgbox = MessageBox(msg, b1, b2, b3, b4, b5, frame_, t, entry)
     msgbox.root.mainloop()
     # the function pauses here until the mainloop is quit
     msgbox.root.withdraw()

@@ -26,67 +26,128 @@ from tkinter import filedialog, messagebox
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
-# Wrap the openai Whisper program to make it useful and more portable
-def screencast(path_in=None, waiting=True, silent=True, conversation=False, frame_rate=30,
-               audio_in="CABLE Output (VB-Audio Virtual Cable)",
-               crf=28, rec_time=None):
-    print(f"{path_in=} {path_in=} {waiting=} {silent=} {conversation=} {crf=}")
+# Delay audio to sync with video
+def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
+    print(f"{delay=} {input_file=} {output_file=} {silent=}")
+
     # Initialization
     result_ready = False
-    if path_in is None:
-        filepaths = None
+
+    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
+
+    command = ("ffmpeg -i {:s}".format(input_file) +
+               " -itsoffset {:5.3f}".format(delay) +
+               " -i {:s}".format(input_file) +
+               ' -c:v copy -map 0:v:0 -map 1:a:0 ' +
+               " -y {:s}".format(output_file))
+
+    start_time = timeit.default_timer()
+    if silent is False:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(command, silent=silent)
+        print(Colors.reset)
+        print(command + '\n')
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+              Colors.reset, end='')
+        result_ready = True
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
-        filepaths = [path_in]
+        result = run_shell_cmd(command, silent=silent)
+        if result == -1:
+            return result_ready, False
+        result_ready = True
+
+
+# Delay video to sync with audio
+def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
+    print(f"{delay=} {input_file=} {output_file=} {silent=}")
+
+    # Initialization
+    result_ready = False
+
+    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
+
+    command = ("ffmpeg -i {:s}".format(input_file) +
+               " -itsoffset {:5.3f}".format(delay) +
+               " -i {:s}".format(input_file) +
+               ' -c:v copy -map 0:a:0 -map 1:v:0 ' +
+               " -y {:s}".format(output_file))
+
+    start_time = timeit.default_timer()
+    if silent is False:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(command, silent=silent)
+        print(Colors.reset)
+        print(command + '\n')
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+        print(Colors.fg.orange, 'Processed delay for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+              Colors.reset, end='')
+        result_ready = True
+        print(Colors.fg.orange, "  The synchronized result is in ", Colors.fg.blue, output_file, Colors.reset)
+    else:
+        result = run_shell_cmd(command, silent=silent)
+        if result == -1:
+            return result_ready, False
+        result_ready = True
+
+
+# Wrap the ffmpeg program to make it useful and more portable
+def screencast(waiting=False, silent=True, conversation=False, frame_rate=30, duration=30.,
+               video_in="desktop",
+               audio_in="CABLE Output (VB-Audio Virtual Cable)",
+               output_file=None,
+               crf=28, rec_time=None):
+    print(f"{waiting=} {silent=} {conversation=} {frame_rate=} {duration=} {video_in=} {audio_in=} {output_file=} \
+{crf=} {rec_time=}")
+    # Initialization
+    result_ready = False
 
     if check_install(platform.system()) != 0:
         print(Colors.fg.red, 'Installation problems.   See suggestions a few lines above')
         # Ask for input to force hold to see stderr
         if silent is False and waiting is True:
             input('\nEnter anything to close window')
-        return None, None
+        return result_ready, None
 
     # Screencast
-    command = ('ffmpeg -f gdigrab -threads 4 ' +
-               "-r {:d2} -framerate {:d2}".format(frame_rate, frame_rate) +
-               ' -i desktop -f dshow -i ' +
-               ' audio=' + audio_in +
-               ' -vcodec libx265 ' +
-               "-crf {:2d}".format(crf) +
-               '-qp 0 -y -t 30 output.mkv')
+    command = ('ffmpeg -f gdigrab -threads 4' +
+               " -r {:d} -framerate {:d}".format(frame_rate, frame_rate) +
+               ' -i "{:s}"'.format(video_in) +
+               ' -f dshow -i audio="{:s}"'.format(audio_in) +
+               ' -vcodec libx265' +
+               " -crf {:d}".format(crf) +
+               ' -qp 0 -y' +
+               " -t {:5.1f} ".format(rec_time) +
+               output_file)
     start_time = timeit.default_timer()
     if silent is False:
         print(command + '\n')
-        writer = get_writer('txt', path)
-        wh_model = whisper.load_model(model, device=device, download_root=cache_path)
         print(Colors.bg.brightblack, Colors.fg.wheat)
-        result = whisper.transcribe(wh_model, filepath, temperature=0.0, fp16=False, verbose=True)
+        result = run_shell_cmd(command, silent=silent)
         print(Colors.reset)
         print(command + '\n')
         if result == -1:
-            print(Colors.fg.blue, 'failed...on to next file', Colors.reset)
-            continue
-        print(Colors.fg.orange, 'Transcribed in {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
               Colors.reset, end='')
-        # Save the result in a text file and display it for pasting to writing documents
-        #            writer and writer_args are defined in openai-whisper/transcribe.py
-        writer_args = {'highlight_words': False, 'max_line_count': None, 'max_line_width': None}
-        writer(result, txt_path, writer_args)
         result_ready = True
-        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, txt_path, Colors.reset)
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
-        writer = get_writer('txt', path)
-        wh_model = whisper.load_model(model, device=device, download_root=cache_path)
-        result = whisper.transcribe(wh_model, filepath, temperature=0.0, fp16=False, verbose=True)
+        result = run_shell_cmd(command, silent=silent)
         if result == -1:
-            continue
-        # Save the result in a text file and display it for pasting to writing documents
-        #            writer and writer_args are defined in openai-whisper/transcribe.py
-        writer_args = {'highlight_words': False, 'max_line_count': None, 'max_line_width': None}
-        writer(result, txt_path, writer_args)
+            return result_ready, False
         result_ready = True
 
     print('')
-    display_result(txt_path, platform.system(), silent, conversation=conversation)
+    display_result(output_file, platform.system(), silent, conversation=conversation)
 
     # Delay a little to allow windows to pop up without hiding each other.
     # The slower the computer, the more needed.
@@ -97,16 +158,29 @@ def screencast(path_in=None, waiting=True, silent=True, conversation=False, fram
         if silent is False:
             input('\nEnter anything to close window')
         else:
-            messagebox.showinfo(title='openAI whisper', message='files ready')
+            messagebox.showinfo(title='screencast', message='files ready')
 
-    return txt_path, result_ready
+    return output_file, result_ready
 
 
 if __name__ == '__main__':
-    def main(model=''):
-        if model != '':
-            print("user requested model '{:s}'".format(model))
-        screencast(model=model)
+    def main(duration='', sync_delay=''):
+        if duration != '':
+            print("user requested duration '{:s}'".format(duration))
+        else:
+            duration = 2
+        if sync_delay != '':
+            print("user requested sync delay '{:s}'".format(sync_delay))
+        else:
+            sync_delay = 1.0
+        raw_file, result_ready = screencast(rec_time=duration, silent=False, output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
+        if result_ready:
+            if sync_delay >= 0.0:
+                delay_video_sync(silent=False, delay=sync_delay, input_file=raw_file,
+                                 output_file=os.path.join(os.getcwd(), 'screencast_sync.mkv'))
+            else:
+                delay_audio_sync(silent=False, delay=-sync_delay, input_file=raw_file,
+                                 output_file=os.path.join(os.getcwd(), 'screencast_sync.mkv'))
 
     # Main call
     # windows cli run from location of screencast.py:   python .\screencast.py base "silent=True"
