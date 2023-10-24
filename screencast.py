@@ -117,14 +117,11 @@ def screencast(waiting=False, silent=True, conversation=False, frame_rate=30, du
         return result_ready, None
 
     # Screencast
-    command = ('ffmpeg -f gdigrab -threads 4' +
-               " -r {:d} -framerate {:d}".format(frame_rate, frame_rate) +
-               ' -i "{:s}"'.format(video_in) +
+    command = ("ffmpeg -threads 4 -r {:d}".format(frame_rate) +
+               ' -f gdigrab -i "{:s}"'.format(video_in) +
                ' -f dshow -i audio="{:s}"'.format(audio_in) +
-               ' -vcodec libx265' +
-               " -crf {:d}".format(crf) +
-               ' -qp 0 -y' +
-               " -t {:5.1f} ".format(rec_time) +
+               " -vcodec libx265 -crf {:d}".format(crf) +
+               " -t {:5.1f} -y ".format(rec_time) +
                output_file)
     start_time = timeit.default_timer()
     if silent is False:
@@ -168,7 +165,7 @@ if __name__ == '__main__':
         if duration != '':
             print("user requested duration '{:s}'".format(duration))
         else:
-            duration = 2
+            duration = 10
         if sync_delay != '':
             print("user requested sync delay '{:s}'".format(sync_delay))
         else:
