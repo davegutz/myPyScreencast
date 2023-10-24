@@ -17,12 +17,13 @@
 # Lesser General Public License for more details.
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text
+# import os
 import time
 import timeit
 import platform
 import tkinter as tk
 from screencast_util import *
-from tkinter import filedialog, messagebox
+# from tkinter import filedialog, messagebox
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
@@ -99,13 +100,15 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
 
 # Wrap the ffmpeg program to make it useful and more portable
-def screencast(waiting=False, silent=True, conversation=False, frame_rate=30, duration=30.,
-               video_in="desktop",
-               audio_in="CABLE Output (VB-Audio Virtual Cable)",
+def screencast(waiting=False, silent=True, conversation=False, rate=30,
+               video_grabber="gdigrab", video_in='desktop',
+               audio_grabber="dshow", audio_in="CABLE Output (VB-Audio Virtual Cable)",
                output_file=None,
                crf=28, rec_time=None):
-    print(f"{waiting=} {silent=} {conversation=} {frame_rate=} {duration=} {video_in=} {audio_in=} {output_file=} \
-{crf=} {rec_time=}")
+
+    print(f"{waiting=} {silent=} {conversation=} {rate=} {video_grabber=} {video_in=} \
+{audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=}")
+
     # Initialization
     result_ready = False
 
@@ -117,9 +120,9 @@ def screencast(waiting=False, silent=True, conversation=False, frame_rate=30, du
         return result_ready, None
 
     # Screencast
-    command = ("ffmpeg -threads 4 -r {:d}".format(frame_rate) +
-               ' -f gdigrab -i "{:s}"'.format(video_in) +
-               ' -f dshow -i audio="{:s}"'.format(audio_in) +
+    command = ("ffmpeg -threads 4 -r {:d}".format(rate) +
+               " -f {:s} -i {:s}".format(video_grabber, video_in) +
+               " -f {:s} -i {:s}".format(audio_grabber, audio_in) +
                " -vcodec libx265 -crf {:d}".format(crf) +
                " -t {:5.1f} -y ".format(rec_time) +
                output_file)
@@ -170,7 +173,33 @@ if __name__ == '__main__':
             print("user requested sync delay '{:s}'".format(sync_delay))
         else:
             sync_delay = 1.0
-        raw_file, result_ready = screencast(rec_time=duration, silent=False, output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
+
+        plate = platform.system()
+        if plate == 'Windows':
+            video_grabber = "gdigrab"
+            video_in = "desktop"
+            audio_grabber = 'dshow'
+            audio_in = "audio=CABLE Output (VB-Audio Virtual Cable)"
+        elif plate == 'Linux':
+            video_grabber = "x11grab"
+            video_in = ":0.0+0,0"
+            audio_grabber = 'pulse'
+            audio_in = 'default'
+        elif plate == 'Darwin':
+            video_grabber = None
+            video_in = None
+            audio_grabber = None
+            audio_in = None
+        else:
+            print(f"unknown platform {platform}")
+            exit(-1)
+
+        raw_file, result_ready = screencast(silent=False, rate=30,
+                                            video_grabber=video_grabber, video_in=video_in,
+                                            audio_grabber=audio_grabber, audio_in=audio_in,
+                                            crf=28,
+                                            rec_time=duration,
+                                            output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
         if result_ready:
             if sync_delay >= 0.0:
                 delay_video_sync(silent=False, delay=sync_delay, input_file=raw_file,
