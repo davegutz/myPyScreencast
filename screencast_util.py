@@ -64,8 +64,12 @@ else:
 # Assume that we're either starting with a good python installation
 #   or
 # a working PyCharm installation
-def check_install(platform, pure_python=True):
+def check_install(platform):
     print("checking for dependencies...", end='')
+    if platform == 'Linux':
+        pure_python = False
+    else:
+        pure_python = True
 
     # Check status
     if platform == 'Darwin' or platform == 'Windows' or platform == 'Linux':
@@ -128,10 +132,12 @@ def check_install_ffmpeg(pure_python=True, verbose=False):
     if have == -1:
         print(Colors.fg.red, 'failed')
         print(Colors.fg.green, 'Install ffmpeg', Colors.reset)
+        have_ffmpeg = False
     else:
         if verbose:
             print('success')
-    return have
+        have_ffmpeg = True
+    return have_ffmpeg
 
 
 # Check installation status of python
@@ -357,7 +363,7 @@ def run_shell_cmd(cmd, silent=False, save_stdout=False, colorize=False):
         if save_stdout:
             return stdout_line
         else:
-            return output
+            return exit_code
     else:
         return -1
 

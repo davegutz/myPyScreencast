@@ -4,7 +4,30 @@
 
 import os
 # import time
+
+# view sources
 # ffmpeg -list_devices true -f dshow -i dummy'
+
+# linux
+# pactl list sources
+# ffmpeg -f pulse -i default /tmp/pulse.wav
+# xwininfo  # last line feeds into following, for a selected window
+# ffmpeg -f x11grab -video_size 1530x900 -framerate 30 -i :0.0+0,0 -vf format=yuv420p output.mp4
+# full screen
+# xdpyinfo | grep 'dimensions:'
+# ffmpeg -f x11grab -video_size 1600x900 -framerate 30 -i :0.0+0,0 -vf format=yuv420p output.mp4
+# full screen with sound; huge and stuttery
+# ffmpeg -video_size 1600x900 -framerate 30 -f x11grab -i :0.0+0,0 -f pulse -i default -c:v libx264rgb -crf 0 -preset ultrafast -y sample.mkv
+#    - add threads for stutter...none of these help
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab -i :0.0+0,0 -f pulse -i default -c:v libx264rgb -crf 0 -preset ultrafast -y sample.mkv
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab -i :0.0+0,0 -f pulse -i default -c:v libx265 -crf 28 -preset ultrafast -y sample.mkv
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab -i :0.0+0,0 -f pulse -i default -c:v libx265 -crf 28 -y sample.mkv
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab -i :0.0+0,0 -f pulse -i default -vcodec libx265 -crf 28 -y sample.mkv
+# hardware accel doesn't help stutter
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab  -hwaccel vaapi -i :0.0+0,0 -f pulse -i default -vcodec libx265 -crf 28 -y sample.mkv
+# ffmpeg -video_size 1600x900 -framerate 30 -threads 4 -f x11grab -i :0.0+0,0 -f pulse -i default -vcodec libx265 -crf 28 -y sample.mkv
+# maybe it's the drive backup process running at same time. need to turn that off
+
 path_mkv = os.path.join(os.getcwd(), 'output.mkv')
 if os.path.exists(path_mkv):
     os.remove(path_mkv)
