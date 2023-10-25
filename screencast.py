@@ -191,11 +191,11 @@ if __name__ == '__main__':
             video_in = ":0.0+0,0"
             audio_grabber = 'pulse'
             audio_in = 'default'
-            crf = 28
+            crf = 22
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:
-                sync_delay = -1.0
+                sync_delay = 1.0
         elif plate == 'Darwin':
             video_grabber = None
             video_in = None
