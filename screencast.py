@@ -195,7 +195,7 @@ if __name__ == '__main__':
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:
-                sync_delay = 1.0
+                sync_delay = -0.5
         elif plate == 'Darwin':
             video_grabber = None
             video_in = None
@@ -209,13 +209,14 @@ if __name__ == '__main__':
         else:
             print(f"unknown platform {platform}")
             exit(-1)
-
-        raw_file, result_ready = screencast(silent=False,
-                                            video_grabber=video_grabber, video_in=video_in,
-                                            audio_grabber=audio_grabber, audio_in=audio_in,
-                                            crf=crf,
-                                            rec_time=duration,
-                                            output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
+        result_ready = True
+        raw_file = os.path.join(os.getcwd(), 'screencast.mkv')
+        # raw_file, result_ready = screencast(silent=False,
+        #                                     video_grabber=video_grabber, video_in=video_in,
+        #                                     audio_grabber=audio_grabber, audio_in=audio_in,
+        #                                     crf=crf,
+        #                                     rec_time=duration,
+        #                                     output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
         if result_ready:
             if sync_delay >= 0.0:
                 delay_video_sync(silent=False, delay=sync_delay, input_file=raw_file,
