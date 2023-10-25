@@ -123,14 +123,19 @@ def screencast(waiting=False, silent=True, conversation=False,
     command = ("ffmpeg -threads 4" +
                " -f {:s}".format(video_grabber) +
                " -probesize 42M" +
-               " -thread_queue_size 1024"
-               " -i {:s}".format(video_in) +
-               " -f {:s}".format(audio_grabber) +
-               " -thread_queue_size 1024"
-               " -i {:s}".format(audio_in) +
-               " -vcodec libx264 -crf {:d}".format(crf) +
+               " -thread_queue_size 1024")
+    if audio_grabber is not None:
+        command += (" -i {:s}".format(video_in) +
+                    " -f {:s}".format(audio_grabber) +
+                    " -i {:s}".format(audio_in) +
+                    " -thread_queue_size 1024")
+    else:
+        command += (" -i {:s}:{:s}".format(video_in, audio_in))
+
+    command += (" -vcodec libx264 -crf {:d}".format(crf) +
                " -t {:5.1f} -y ".format(rec_time) +
                output_file)
+
     start_time = timeit.default_timer()
     if silent is False:
         print(command + '\n')
@@ -197,11 +202,11 @@ if __name__ == '__main__':
             else:
                 sync_delay = -0.5
         elif plate == 'Darwin':
-            video_grabber = None
-            video_in = None
+            video_grabber = 'avfoundation'
+            video_in = '1'
             audio_grabber = None
-            audio_in = None
-            crf = 20
+            audio_in = '2'
+            crf = 28
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:

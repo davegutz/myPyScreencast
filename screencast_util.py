@@ -23,7 +23,7 @@ import pkg_resources
 from Colors import Colors
 # from mbox import MessageBox
 from typing import Callable, TextIO
-import vlc  # python-vlc
+# import vlc  # python-vlc
 
 # Filetype definitions
 supported = ['.mp3', '.m4a', '.mp4', '.mpeg', '.mpga', '.opus', '.ts', '.voc', '.w64', '.wav',
