@@ -214,9 +214,9 @@ def display_result(output_file, platform, silent, conversation=False):
 
     if silent is False:
         if platform == 'Darwin':
-            subprocess.Popen(['open', '-a', 'TextEdit', output_file])
+            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
         if platform == 'Linux':
-            subprocess.Popen(['gedit', output_file])
+            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
         elif platform == 'Windows':
             print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
             # media = vlc.MediaPlayer(output_file)

@@ -100,13 +100,13 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
 
 # Wrap the ffmpeg program to make it useful and more portable
-def screencast(waiting=False, silent=True, conversation=False, rate=30,
+def screencast(waiting=False, silent=True, conversation=False,
                video_grabber="gdigrab", video_in='desktop',
                audio_grabber="dshow", audio_in="CABLE Output (VB-Audio Virtual Cable)",
                output_file=None,
                crf=28, rec_time=None):
 
-    print(f"{waiting=} {silent=} {conversation=} {rate=} {video_grabber=} {video_in=} \
+    print(f"{waiting=} {silent=} {conversation=} {video_grabber=} {video_in=} \
 {audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=}")
 
     # Initialization
@@ -120,10 +120,15 @@ def screencast(waiting=False, silent=True, conversation=False, rate=30,
         return result_ready, None
 
     # Screencast
-    command = ("ffmpeg -threads 4 -r {:d}".format(rate) +
-               " -f {:s} -i {:s}".format(video_grabber, video_in) +
-               " -f {:s} -i {:s}".format(audio_grabber, audio_in) +
-               " -vcodec libx265 -crf {:d}".format(crf) +
+    command = ("ffmpeg -threads 4" +
+               " -f {:s}".format(video_grabber) +
+               " -probesize 42M" +
+               " -thread_queue_size 1024"
+               " -i {:s}".format(video_in) +
+               " -f {:s}".format(audio_grabber) +
+               " -thread_queue_size 1024"
+               " -i {:s}".format(audio_in) +
+               " -vcodec libx264 -crf {:d}".format(crf) +
                " -t {:5.1f} -y ".format(rec_time) +
                output_file)
     start_time = timeit.default_timer()
@@ -168,11 +173,7 @@ if __name__ == '__main__':
         if duration != '':
             print("user requested duration '{:s}'".format(duration))
         else:
-            duration = 10
-        if sync_delay != '':
-            print("user requested sync delay '{:s}'".format(sync_delay))
-        else:
-            sync_delay = 1.0
+            duration = 180
 
         plate = platform.system()
         if plate == 'Windows':
@@ -180,24 +181,39 @@ if __name__ == '__main__':
             video_in = "desktop"
             audio_grabber = 'dshow'
             audio_in = "audio=CABLE Output (VB-Audio Virtual Cable)"
+            crf = 28
+            if sync_delay != '':
+                print("user requested sync delay '{:s}'".format(sync_delay))
+            else:
+                sync_delay = 1.0
         elif plate == 'Linux':
             video_grabber = "x11grab"
             video_in = ":0.0+0,0"
             audio_grabber = 'pulse'
             audio_in = 'default'
+            crf = 28
+            if sync_delay != '':
+                print("user requested sync delay '{:s}'".format(sync_delay))
+            else:
+                sync_delay = -1.0
         elif plate == 'Darwin':
             video_grabber = None
             video_in = None
             audio_grabber = None
             audio_in = None
+            crf = 20
+            if sync_delay != '':
+                print("user requested sync delay '{:s}'".format(sync_delay))
+            else:
+                sync_delay = 0.0
         else:
             print(f"unknown platform {platform}")
             exit(-1)
 
-        raw_file, result_ready = screencast(silent=False, rate=30,
+        raw_file, result_ready = screencast(silent=False,
                                             video_grabber=video_grabber, video_in=video_in,
                                             audio_grabber=audio_grabber, audio_in=audio_in,
-                                            crf=28,
+                                            crf=crf,
                                             rec_time=duration,
                                             output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
         if result_ready:
