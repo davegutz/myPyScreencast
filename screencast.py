@@ -124,17 +124,22 @@ def screencast(waiting=False, silent=True, conversation=False,
                " -f {:s}".format(video_grabber) +
                " -probesize 42M" +
                " -thread_queue_size 1024")
-    if audio_grabber is not None:
+    if audio_grabber is None:  # Darwin
+        command += (" -i {:s}:{:s}".format(video_in, audio_in))
+    else:
         command += (" -i {:s}".format(video_in) +
                     " -f {:s}".format(audio_grabber) +
                     " -i {:s}".format(audio_in) +
                     " -thread_queue_size 1024")
-    else:
-        command += (" -i {:s}:{:s}".format(video_in, audio_in))
 
-    command += (" -vcodec libx264 -crf {:d}".format(crf) +
-               " -t {:5.1f} -y ".format(rec_time) +
-               output_file)
+    command += (" -vcodec libx264 -crf {:d}".format(crf))
+
+    if audio_grabber is None:  # Darwin
+                # " -vf crop=1441:900:0:0" +  # full screen macbook air
+        command += (" -vf crop=1320:705:66:110")  # full prime opera
+
+    command += (" -t {:5.1f} -y ".format(rec_time) +
+                output_file)
 
     start_time = timeit.default_timer()
     if silent is False:
