@@ -131,6 +131,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                     " -f {:s}".format(audio_grabber) +
                     " -i {:s}".format(audio_in) +
                     " -thread_queue_size 1024")
+                    # " -i {:s}".format(audio_in))
 
     command += (" -vcodec libx264 -crf {:d}".format(crf))
 
@@ -183,7 +184,7 @@ if __name__ == '__main__':
         if duration != '':
             print("user requested duration '{:s}'".format(duration))
         else:
-            duration = 6
+            duration = 180
 
         plate = platform.system()
         if plate == 'Windows':
@@ -205,13 +206,13 @@ if __name__ == '__main__':
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:
-                sync_delay = -0.5
+                sync_delay = -0.3
         elif plate == 'Darwin':
             video_grabber = 'avfoundation'
             video_in = '1'
             audio_grabber = None
             audio_in = '2'
-            crf = 28
+            crf = 25
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:
