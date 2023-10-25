@@ -136,7 +136,7 @@ def screencast(waiting=False, silent=True, conversation=False,
 
     if audio_grabber is None:  # Darwin
                 # " -vf crop=1441:900:0:0" +  # full screen macbook air
-        command += (" -vf crop=1320:705:66:110")  # full prime opera
+        command += (" -vf crop=1382:814:57:82")  # full prime opera
 
     command += (" -t {:5.1f} -y ".format(rec_time) +
                 output_file)
@@ -183,7 +183,7 @@ if __name__ == '__main__':
         if duration != '':
             print("user requested duration '{:s}'".format(duration))
         else:
-            duration = 180
+            duration = 6
 
         plate = platform.system()
         if plate == 'Windows':
