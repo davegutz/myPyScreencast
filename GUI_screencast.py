@@ -29,13 +29,8 @@ import shutil
 import pyperclip
 import subprocess
 import datetime
+import platform
 global putty_shell
-
-# Defaults for initialization of ini
-defaults = {'Darwin': ('', '', ("For general purpose running", "'save data' will present a choice of file name", "")),
-          'Windows': ('Ff0;D^0;Ca.5;Xp0;W4;Xm247;DP1;Dr100;W2;HR;Pf;v2;Xv.002;Xu1;W200;Xu0;Xv1;W100;v0;Pf;', 'Hd;Xp0;Xu0;Xv1;Ca.5;v0;Rf;Pf;DP4;', ("Run for 60 sec.   Plots DOM 1 Fig 2 or 3 should show Tb was detected as fault but not failed.",)),
-          'Linux': ('Ff0;D^0;Ca.5;Xp0;W4;Xm246;DP1;Dr100;W2;HR;Pf;v2;Xv.002;W50;Xu1;W200;Xu0;Xv1;W100;v0;Pf;', 'Hd;Xp0;Xu0;Xv1;Ca.5;v0;Rf;Pf;DP4;', ("Run for 60 sec.   Plots DOM 1 Fig 2 or 3 should show Tb was detected as fault but not failed.", "'Xp0' in reset puts Xm back to 247.")),
-          }
 
 
 # Begini - configuration class using .ini files
@@ -96,153 +91,6 @@ def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
 
 
-def lookup_default():
-    start_val, reset_val, ev_val = defaults.get(option.get())
-    start.set(start_val)
-    start_button.config(text=start.get())
-    reset.set(reset_val)
-    reset_button.config(text=reset.get())
-    while len(ev_val) < 4:
-        ev_val = ev_val + ('',)
-    if ev_val[0]:
-        ev1_label.config(text='-' + ev_val[0])
-    else:
-        ev1_label.config(text='')
-    if ev_val[1]:
-        ev2_label.config(text='-' + ev_val[1])
-    else:
-        ev2_label.config(text='')
-    if ev_val[2]:
-        ev3_label.config(text='-' + ev_val[2])
-    else:
-        ev3_label.config(text='')
-    if ev_val[3]:
-        ev4_label.config(text='-' + ev_val[3])
-    else:
-        ev4_label.config(text='')
-
-
-def option_handler(*args):
-    lookup_start()
-    option_ = option.get()
-    option_show.set(option_)
-    cf['others']['option'] = option_
-    cf.save_to_file()
-    Test.create_file_path_and_key()
-    Ref.create_file_path_and_key()
-    save_data_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='black', text='save data')
-    save_data_as_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='black', text='save data as')
-    start_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-    reset_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-
-
-
-def ref_remove():
-    ref_label.grid_remove()
-    Ref.version_button.grid_remove()
-    Ref.unit_button.grid_remove()
-    Ref.battery_button.grid_remove()
-    Ref.key_label.grid_remove()
-    Ref.label.grid_remove()
-    run_button.config(text='Compare Run Sim')
-
-
-def ref_restore():
-    ref_label.grid()
-    Ref.version_button.grid()
-    Ref.unit_button.grid()
-    Ref.battery_button.grid()
-    Ref.key_label.grid()
-    Ref.label.grid()
-    run_button.config(text='Compare Run Run')
-
-
-def save_data():
-    if os.path.getsize(putty_test_csv_path.get()) > 512:  # bytes
-        # create empty file
-        try:
-            open(empty_csv_path.get(), 'x')
-        except FileExistsError:
-            pass
-        # For custom option, redefine Test.file_path if requested
-        new_file_txt = None
-        if option.get() == 'custom':
-            new_file_txt = tk.simpledialog.askstring(title=__file__, prompt="custom file name string:")
-            if new_file_txt is not None:
-                Test.create_file_path_and_key(name_override=new_file_txt)
-                Test.label.config(text=Test.file_txt)
-                print('Test.file_path', Test.file_path)
-        if os.path.isfile(Test.file_path) and os.path.getsize(Test.file_path) > 0:  # bytes
-            confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite?')
-            if confirmation is False:
-                print('reset and use clear')
-                tkinter.messagebox.showwarning(message='reset and use clear')
-                return
-        copy_clean(putty_test_csv_path.get(), Test.file_path)
-        print('copied ', putty_test_csv_path.get(), '\nto\n', Test.file_path)
-        save_data_button.config(bg='green', activebackground='green', fg='red', activeforeground='red', text='data saved')
-        save_data_as_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='black', text='data saved')
-        shutil.copyfile(empty_csv_path.get(), putty_test_csv_path.get())
-        print('emptied', putty_test_csv_path.get())
-        try:
-            os.remove(empty_csv_path.get())
-        except OSError:
-            pass
-        print('updating Test file label')
-        Test.create_file_path_and_key(name_override=new_file_txt)
-    else:
-        print('putty test file is too small (<512 bytes) probably already done')
-        tkinter.messagebox.showwarning(message="Nothing to save")
-    start_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-    reset_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-
-
-def save_data_as():
-    if os.path.getsize(putty_test_csv_path.get()) > 512:  # bytes
-        # create empty file
-        try:
-            open(empty_csv_path.get(), 'x')
-        except FileExistsError:
-            pass
-        # For custom option, redefine Test.file_path if requested
-        if option.get() == 'custom':
-            new_file_txt = tk.simpledialog.askstring(title=__file__, prompt="custom file name string:")
-            if new_file_txt is not None:
-                Test.create_file_path_and_key(name_override=new_file_txt)
-                Test.label.config(text=Test.file_txt)
-                print('Test.file_path', Test.file_path)
-        else:
-            new_file_txt = tk.simpledialog.askstring(title=__file__, prompt="custom file name string:",
-                                                     initialvalue=Test.file_txt)
-            if new_file_txt is not None:
-                Test.create_file_path_and_key(name_override=new_file_txt)
-                Test.label.config(text=Test.file_txt)
-                print('Test.file_path', Test.file_path)
-        if os.path.isfile(Test.file_path) and os.path.getsize(Test.file_path) > 0:  # bytes
-            confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite?')
-            if confirmation is False:
-                print('reset and use clear')
-                tkinter.messagebox.showwarning(message='reset and use clear')
-                return
-        copy_clean(putty_test_csv_path.get(), Test.file_path)
-        print('copied ', putty_test_csv_path.get(), '\nto\n', Test.file_path)
-        save_data_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='black', text='data saved')
-        save_data_as_button.config(bg='green', activebackground='green', fg='red', activeforeground='red', text='data saved as')
-        shutil.copyfile(empty_csv_path.get(), putty_test_csv_path.get())
-        print('emptied', putty_test_csv_path.get())
-        try:
-            os.remove(empty_csv_path.get())
-        except OSError:
-            pass
-        print('updating Test file label')
-        Test.create_file_path_and_key(name_override=new_file_txt)
-    else:
-        print('putty test file is too small (<512 bytes) probably already done')
-        tkinter.messagebox.showwarning(message="Nothing to save")
-    start_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-    reset_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
-
-
 if __name__ == '__main__':
     import os
     import tkinter as tk
@@ -251,50 +99,77 @@ if __name__ == '__main__':
     thread_active = 0
 
     # Configuration for entire folder selection read with filepaths
-    def_dict = {'test': {"version": "g20230530",
-                         "unit": "pro1a",
-                         "battery": "bb"},
-                'ref':  {"version": "v20230403",
-                         "unit": "pro1a",
-                         "battery": "bb"},
-                'others': {"option": "custom",
-                           'modeling': True}
+    def_dict = {
+                'Linux':   {"title": '',
+                            "rec_time": '6.',
+                            "crf": '25',
+                            "video_grabber": 'x11grab',
+                            "video_in": ':0.0+0.0',
+                            "audio_grabber": 'pulse',
+                            "audio_in": 'default',
+                            "silent": '1',
+                            "video_delay": '0.0'},
+                'Windows': {"title": '',
+                            "rec_time": '6.',
+                            "crf": '28',
+                            "video_grabber": "gdigrab",
+                            "video_in": 'desktop',
+                            "audio_grabber": 'dshow',
+                            "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
+                            "silent": '1',
+                            "video_delay": '0.0'},
+                'Darwin':  {"title": '',
+                            "rec_time": '6.',
+                            "crf": '25',
+                            "video_grabber": 'avfoundation',
+                            "video_in": '1',
+                            "audio_grabber": '',
+                            "audio_in": '2',
+                            "silent": '1',
+                            "video_delay": '0.0'},
                 }
-
     cf = Begini(__file__, def_dict)
 
-    # Define frames
+    # Frame properties
     min_width = 800
     main_height = 500
     wrap_length = 800
     bg_color = "lightgray"
+    plate = platform.system()
+
+    # Globals
+    master = tk.Tk()
+    master.title('Screencast')
+    master.wm_minsize(width=min_width, height=main_height)
+    script_loc = os.path.dirname(os.path.abspath(__file__))
+    cwd_path = tk.StringVar(master, os.getcwd())
+    path_to_data = tk.StringVar(master, os.path.join(cwd_path.get(), '../dataReduction'))
+    icon_path = tk.StringVar(master, os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+    title = tk.StringVar(master, cf[plate]['title'])
+    rec_time = tk.DoubleVar(master, float(cf[plate]['rec_time']))
+    crf = tk.IntVar(master, int(cf[plate]['crf']))
+    video_grabber = tk.StringVar(master, cf[plate]['video_grabber'])
+    video_in = tk.StringVar(master, cf[plate]['video_in'])
+    audio_grabber = tk.StringVar(master, cf[plate]['audio_grabber'])
+    audio_in = tk.StringVar(master, cf[plate]['audio_in'])
+    silent = tk.BooleanVar(master, bool(cf[plate]['silent']))
+    video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
 
     # Master and header
-    master = tk.Tk()
-    master.title('State of Charge')
-    master.wm_minsize(width=min_width, height=main_height)
-    # master.geometry('%dx%d' % (master.winfo_screenwidth(), master.winfo_screenheight()))
-    pwd_path = tk.StringVar(master)
-    pwd_path.set(os.getcwd())
-    path_to_data = os.path.join(pwd_path.get(), '../dataReduction')
-    print(path_to_data)
-    icon_path = os.path.join(ex_root.script_loc, 'TestSOC_Icon.png')
-    master.iconphoto(False, tk.PhotoImage(file=icon_path))
-    tk.Label(master, text="Item", fg="blue").grid(row=0, column=0, sticky=tk.N, pady=2)
-    tk.Label(master, text="Test", fg="blue").grid(row=0, column=1, sticky=tk.N, pady=2)
-    modeling = tk.BooleanVar(master)
-    modeling.set(bool(cf['others']['modeling']))
-    modeling_button = tk.Checkbutton(master, text='modeling', bg=bg_color, variable=modeling,
-                                     onvalue=True, offvalue=False)
-    modeling_button.grid(row=0, column=3, pady=2, sticky=tk.N)
-    modeling.trace_add('write', modeling_handler)
+    print(path_to_data.get())
+    master.iconphoto(False, tk.PhotoImage(file=icon_path.get()))
+    tk.Label(master, text="Location", fg="blue").grid(row=0, column=0, sticky=tk.N, pady=2)
+    tk.Label(master, text="Title", fg="blue").grid(row=0, column=1, sticky=tk.N, pady=2)
+    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent,
+                                   onvalue=True, offvalue=False)
+    silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
     ref_label = tk.Label(master, text="Ref", fg="blue")
     ref_label.grid(row=0, column=4, sticky=tk.N, pady=2)
 
     # Version row
     tk.Label(master, text="Version").grid(row=1, column=0, pady=2)
-    Test.version_button = tk.Button(master, text=Test.version, command=Test.enter_version, fg="blue", bg=bg_color)
-    Test.version_button.grid(row=1, column=1, pady=2)
+    title_button = tk.Button(master, text=title.get(), command=Test.enter_version, fg="blue", bg=bg_color)
+    title_button.grid(row=1, column=1, pady=2)
     Ref.version_button = tk.Button(master, text=Ref.version, command=Ref.enter_version, fg="blue", bg=bg_color)
     Ref.version_button.grid(row=1, column=4, pady=2)
 
