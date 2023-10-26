@@ -144,7 +144,7 @@ if __name__ == '__main__':
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(master, os.getcwd())
     path_to_data = tk.StringVar(master, os.path.join(cwd_path.get(), '../dataReduction'))
-    icon_path = tk.StringVar(master, os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+    master.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(master, cf[plate]['title'])
     rec_time = tk.DoubleVar(master, float(cf[plate]['rec_time']))
     crf = tk.IntVar(master, int(cf[plate]['crf']))
@@ -155,23 +155,18 @@ if __name__ == '__main__':
     silent = tk.BooleanVar(master, bool(cf[plate]['silent']))
     video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
 
-    # Master and header
-    print(path_to_data.get())
-    master.iconphoto(False, tk.PhotoImage(file=icon_path.get()))
+    # Name row
+    folder_button = tk.Button(master, text=path_to_data.get(), command='enter destination folder', fg="blue", bg=bg_color)
+    title_button = tk.Button(master, text=title.get(), command='enter title', fg="blue", bg=bg_color)
     tk.Label(master, text="Location", fg="blue").grid(row=0, column=0, sticky=tk.N, pady=2)
     tk.Label(master, text="Title", fg="blue").grid(row=0, column=1, sticky=tk.N, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent,
                                    onvalue=True, offvalue=False)
     silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
-    ref_label = tk.Label(master, text="Ref", fg="blue")
-    ref_label.grid(row=0, column=4, sticky=tk.N, pady=2)
 
-    # Version row
-    tk.Label(master, text="Version").grid(row=1, column=0, pady=2)
-    title_button = tk.Button(master, text=title.get(), command=Test.enter_version, fg="blue", bg=bg_color)
+    # Size row
+    tk.Label(master, text="Sizes").grid(row=1, column=0, pady=2)
     title_button.grid(row=1, column=1, pady=2)
-    Ref.version_button = tk.Button(master, text=Ref.version, command=Ref.enter_version, fg="blue", bg=bg_color)
-    Ref.version_button.grid(row=1, column=4, pady=2)
 
     # Unit row
     tk.Label(master, text="Unit").grid(row=2, column=0, pady=2)
