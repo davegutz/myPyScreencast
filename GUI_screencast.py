@@ -336,12 +336,18 @@ if __name__ == '__main__':
     label = tk.Label(master, image=picture)
     label.grid(row=row, column=0, columnspan=2, rowspan=3, padx=5, pady=5)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=row, column=4, pady=2, sticky=tk.E)
+    silent_button.grid(row=row, column=3, pady=2, sticky=tk.E)
 
+    # Instructions
+    row_inst = row + 1
     for i in range(3):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-        blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
+        blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
+    tk.Label(master, text="Screencast:  RECORD while a video is playing full screen.\n \
+- instr.\n \
+- instr.", fg="black").grid(row=row_inst, column=3, sticky=tk.N, pady=2)
+
 
     # Name row
     row += 1
@@ -363,7 +369,7 @@ if __name__ == '__main__':
     destination_folder_button.grid(row=row, column=0, pady=2, sticky=tk.N)
     tk.Label(master, text="/", fg="blue").grid(row=row, column=1, sticky=tk.W, pady=2)
     title_button.grid(row=row, column=2, pady=2, sticky=tk.W)
-    tk.Label(master, text=".mkv", fg="blue").grid(row=row, column=3, sticky=tk.W, pady=2)
+    tk.Label(master, text=".mkv                = Destination File", fg="blue").grid(row=row, column=3, sticky=tk.W, pady=2)
 
     # Recording length row
     row += 1
