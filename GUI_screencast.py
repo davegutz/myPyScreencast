@@ -329,6 +329,11 @@ if __name__ == '__main__':
     result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
     row = 0
 
+    for i in range(1):
+        row += i
+        blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
+        blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
+
     # Name row
     row += 1
     destination_folder_button = None
@@ -347,47 +352,54 @@ if __name__ == '__main__':
     enter_destination_folder(cf[plate]['destination_folder'], True)
     enter_title(cf[plate]['title'], True)
     destination_folder_button.grid(row=row, column=0, pady=2, sticky=tk.N)
-    title_button.grid(row=row, column=1, pady=2, sticky=tk.N)
-    tk.Label(master, text=".mkv", fg="blue").grid(row=row, column=2, sticky=tk.N, pady=2)
+    tk.Label(master, text="/", fg="blue").grid(row=row, column=1, sticky=tk.W, pady=2)
+    title_button.grid(row=row, column=2, pady=2, sticky=tk.W)
+    tk.Label(master, text=".mkv", fg="blue").grid(row=row, column=3, sticky=tk.W, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=row, column=3, pady=2, sticky=tk.N)
+    silent_button.grid(row=row, column=4, pady=2, sticky=tk.E)
 
     # Recording length row
     row += 1
     tk.Label(master, text="Recording length, seconds:").grid(row=row, column=0, pady=2, sticky=tk.E)
     time_button = tk.Button(master, text=rec_time.get(), command=enter_rec_time, fg="green", bg=bg_color)
-    time_button.grid(row=row, column=1, pady=2)
+    time_button.grid(row=row, column=2, pady=2, sticky=tk.W)
 
     # Quality row
     row += 1
     tk.Label(master, text="crf quality for ffmpeg:").grid(row=row, column=0, pady=2, sticky=tk.E)
     crf_button = tk.Button(master, text=crf.get(), command=enter_crf, fg="green", bg=bg_color)
-    crf_button.grid(row=row, column=1, pady=2)
+    crf_button.grid(row=row, column=2, pady=2, sticky=tk.W)
 
     # Video row
     row += 1
-    tk.Label(master, text="Video").grid(row=row, column=0, pady=2, sticky=tk.E)
+    tk.Label(master, text="Video:").grid(row=row, column=0, pady=2, sticky=tk.E)
     video_grabber_button = tk.Button(master, text=video_grabber.get(), command=enter_video_grabber, fg="purple", bg=bg_color)
-    video_grabber_button.grid(row=row, column=1, pady=2)
+    video_grabber_button.grid(row=row, column=2, pady=2, sticky=tk.W)
     video_in_button = tk.Button(master, text=video_in.get(), command=enter_video_in, fg="purple", bg=bg_color)
-    video_in_button.grid(row=row, column=3, pady=2)
+    video_in_button.grid(row=row, column=3, pady=2, sticky=tk.W)
 
     # Audio row
     row += 1
-    tk.Label(master, text="Audio").grid(row=row, column=0, pady=2, sticky=tk.E)
+    tk.Label(master, text="Audio:").grid(row=row, column=0, pady=2, sticky=tk.E)
     audio_grabber_button = tk.Button(master, text=audio_grabber.get(), command=enter_audio_grabber, fg="purple", bg=bg_color)
-    audio_grabber_button.grid(row=row, column=1, pady=2)
+    audio_grabber_button.grid(row=row, column=2, pady=2, sticky=tk.W)
     audio_in_button = tk.Button(master, text=audio_in.get(), command=enter_audio_in, fg="purple", bg=bg_color)
-    audio_in_button.grid(row=row, column=3, pady=2)
+    audio_in_button.grid(row=row, column=3, pady=2, sticky=tk.W)
+
+    # Video delay row
+    row += 1
+    tk.Label(master, text="Video delay +/-").grid(row=row, column=0, pady=2, sticky=tk.E)
+    video_delay_button = tk.Button(master, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
+    video_delay_button.grid(row=row, column=2, pady=2, sticky=tk.W)
 
     # Image row
     row += 1
     pic_path = os.path.join(script_loc, 'screencast.png')
     picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
     label = tk.Label(master, image=picture)
-    label.grid(row=row, column=3, columnspan=2, rowspan=3, padx=5, pady=5)
+    label.grid(row=row, column=2, columnspan=2, rowspan=3, padx=5, pady=5)
 
-    for i in range(5):
+    for i in range(4):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
@@ -397,18 +409,12 @@ if __name__ == '__main__':
 
     # Action row
     row += 1
-    tk.Label(master, text="Action").grid(row=row, column=0, pady=2, sticky=tk.W)
-    record_label = tk.Label(master, text='Action:')
-    record_label.grid(row=row, column=0, padx=5, pady=5)
     record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    record_button.grid(sticky="W", row=row, column=1, padx=5, pady=5)
-    tk.Label(master, text="Video delay +/-").grid(row=row, column=2, pady=2)
-    video_delay_button = tk.Button(master, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
-    video_delay_button.grid(row=row, column=3, pady=2)
+    record_button.grid(sticky="W", row=row, column=0, padx=5, pady=5)
     sync_label = tk.Label(master, text='Sync Only:')
-    sync_label.grid(row=row, column=4, padx=5, pady=5)
+    sync_label.grid(row=row, column=2, padx=5, pady=5, sticky=tk.E)
     sync_button = tk.Button(master, text='REPEAT SYNC', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    sync_button.grid(sticky="W", row=row, column=5, padx=5, pady=5)
+    sync_button.grid(row=row, column=3, padx=5, pady=5, sticky=tk.W)
 
     print(f"after init before handler")
 
