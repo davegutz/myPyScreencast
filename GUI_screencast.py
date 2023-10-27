@@ -93,14 +93,20 @@ def create_file_txt(option_, unit_, battery_):
 
 
 def destination_path_handler(*args):
+    print(f"destination_path_handler")
     if os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()) > 0:  # bytes
         confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
         if confirmation is False:
             print('enter different folder or title first row')
             tkinter.messagebox.showwarning(message='enter different folder or title first row')
             overwriting.set(False)
+            destination_folder_button.config(bg=bg_color)
+            title_button.config(bg=bg_color)
         else:
             overwriting.set(True)
+            destination_folder_button.config(bg='yellow')
+            title_button.config(bg='yellow')
+    cf.save_to_file()
 
 
 def enter_audio_grabber():
@@ -286,7 +292,6 @@ if __name__ == '__main__':
                                   fg="blue", bg=bg_color)
         title_button = tk.Button(master, text=title.get(), command=enter_title,
                                   fg="blue", bg=bg_color)
-    destination_path.trace_add('write', destination_path_handler)
 
     enter_destination_folder(cf[plate]['destination_folder'], True)
     enter_title(cf[plate]['title'], True)
@@ -295,9 +300,6 @@ if __name__ == '__main__':
     tk.Label(master, text=".mkv", fg="blue").grid(row=0, column=2, sticky=tk.N, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
     silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
-    silent.trace_add('write', silent_handler)
-    overwriting_button = tk.Checkbutton(master, text='overwriting', bg=bg_color, variable=overwriting, onvalue=True, offvalue=False)
-    overwriting_button.grid(row=0, column=4, pady=2, sticky=tk.N)
 
     # Recording length row 1
     tk.Label(master, text="Recording length, seconds:").grid(row=1, column=0, pady=2)
@@ -350,7 +352,11 @@ if __name__ == '__main__':
     record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
     record_button.grid(sticky="W", row=11, column=1, padx=5, pady=5)
 
+    print(f"after init before handler")
+
     # Begin
     destination_path_handler()
+    destination_path.trace_add('write', destination_path_handler)
     silent_handler()
+    silent.trace_add('write', silent_handler)
     master.mainloop()
