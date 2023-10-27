@@ -19,16 +19,12 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
 """Define a class to manage configuration using files for memory (poor man's database)"""
-import time
 from configparser import ConfigParser
-import re
 from tkinter import ttk, filedialog
 import tkinter.simpledialog
-import tkinter.messagebox
-import shutil
+from screencast import screencast, delay_audio_sync, delay_video_sync
+# import tkinter.messagebox
 import pyperclip
-import subprocess
-import datetime
 import platform
 global putty_shell
 
@@ -91,12 +87,68 @@ def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
 
 
+def enter_audio_grabber():
+    audio_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grabber parameter"))
+
+
+def enter_audio_in():
+    audio_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter"))
+
+
+def enter_crf():
+    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file"))
+
+
+def enter_destination_folder():
+    print(f"{destination_folder.get()=}")
+    destination_folder.set(tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=destination_folder.get()))
+    print(f"{destination_folder.get()=}")
+
+
+def enter_rec_time():
+    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, seconds"))
+    cf[plate]['rec_time'] = str(rec_time.get())
+    cf.save_to_file()
+    time_button.config(text=rec_time.get())
+
+
+def enter_title():
+    title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title"))
+    cf[plate]['title'] = title.get()
+    cf.save_to_file()
+    title_button.config(text=title.get())
+
+
+def enter_video_grabber():
+    video_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grabber parameter"))
+
+
+def enter_video_in():
+    video_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter"))
+
+
+def record():
+    raw_file, result_ready = screencast(silent=False,
+                                        video_grabber=video_grabber.get(), video_in=video_in.get(),
+                                        audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
+                                        crf=crf.get(),
+                                        rec_time=rec_time.get(),
+                                        output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
+    if result_ready:
+        if video_delay.get() >= 0.0:
+            delay_video_sync(silent=False, delay=video_delay.get(), input_file=raw_file,
+                             output_file=os.path.join(os.getcwd(), destination_path.get()))
+        else:
+            delay_audio_sync(silent=False, delay=-video_delay.get(), input_file=raw_file,
+                             output_file=os.path.join(os.getcwd(), destination_path.get()))
+
+    record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
+
+
 if __name__ == '__main__':
     import os
     import tkinter as tk
     from tkinter import ttk
-    result_ready = 0
-    thread_active = 0
 
     # Configuration for entire folder selection read with filepaths
     def_dict = {
@@ -143,9 +195,10 @@ if __name__ == '__main__':
     master.wm_minsize(width=min_width, height=main_height)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(master, os.getcwd())
-    path_to_data = tk.StringVar(master, os.path.join(cwd_path.get(), '../dataReduction'))
+    destination_folder = tk.StringVar(master, os.path.join(cwd_path.get(), './'))
     master.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(master, cf[plate]['title'])
+    destination_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'.mkv'))
     rec_time = tk.DoubleVar(master, float(cf[plate]['rec_time']))
     crf = tk.IntVar(master, int(cf[plate]['crf']))
     video_grabber = tk.StringVar(master, cf[plate]['video_grabber'])
@@ -155,112 +208,63 @@ if __name__ == '__main__':
     silent = tk.BooleanVar(master, bool(cf[plate]['silent']))
     video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
 
-    # Name row
-    folder_button = tk.Button(master, text=path_to_data.get(), command='enter destination folder', fg="blue", bg=bg_color)
-    title_button = tk.Button(master, text=title.get(), command='enter title', fg="blue", bg=bg_color)
+    # Name row 0
+    folder_button = tk.Button(master, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
+    title_button = tk.Button(master, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
     tk.Label(master, text="Location", fg="blue").grid(row=0, column=0, sticky=tk.N, pady=2)
     tk.Label(master, text="Title", fg="blue").grid(row=0, column=1, sticky=tk.N, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent,
                                    onvalue=True, offvalue=False)
     silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
 
-    # Size row
+    # Size row 1
     tk.Label(master, text="Sizes").grid(row=1, column=0, pady=2)
-    title_button.grid(row=1, column=1, pady=2)
+    time_button = tk.Button(master, text=rec_time.get(), command=enter_rec_time, fg="red", bg=bg_color)
+    time_button.grid(row=1, column=1, pady=2)
+    crf_button = tk.Button(master, text=crf.get(), command=enter_crf, fg="red", bg=bg_color)
+    crf_button.grid(row=1, column=2, pady=2)
 
-    # Unit row
-    tk.Label(master, text="Unit").grid(row=2, column=0, pady=2)
-    Test.unit_button = tk.Button(master, text=Test.unit, command=Test.enter_unit, fg="purple", bg=bg_color)
-    Test.unit_button.grid(row=2, column=1, pady=2)
-    Ref.unit_button = tk.Button(master, text=Ref.unit, command=Ref.enter_unit, fg="purple", bg=bg_color)
-    Ref.unit_button.grid(row=2, column=4, pady=2)
+    # Video row 2
+    tk.Label(master, text="Video").grid(row=2, column=0, pady=2)
+    video_grabber_button = tk.Button(master, text=video_grabber.get(), command=enter_video_grabber, fg="purple", bg=bg_color)
+    video_grabber_button.grid(row=2, column=1, pady=2)
+    video_in_button = tk.Button(master, text=video_in.get(), command=enter_video_in, fg="purple", bg=bg_color)
+    video_in_button.grid(row=2, column=3, pady=2)
 
-    # Battery row
-    tk.Label(master, text="Battery").grid(row=3, column=0, pady=2)
-    Test.battery_button = tk.Button(master, text=Test.battery, command=Test.enter_battery, fg="green", bg=bg_color)
-    Test.battery_button.grid(row=3, column=1, pady=2)
-    Ref.battery_button = tk.Button(master, text=Ref.battery, command=Ref.enter_battery, fg="green", bg=bg_color)
-    Ref.battery_button.grid(row=3, column=4, pady=2)
+    # Audio row 3
+    tk.Label(master, text="Audio").grid(row=3, column=0, pady=2)
+    audio_grabber_button = tk.Button(master, text=audio_grabber.get(), command=enter_audio_grabber, fg="purple", bg=bg_color)
+    audio_grabber_button.grid(row=3, column=1, pady=2)
+    audio_in_button = tk.Button(master, text=audio_in.get(), command=enter_audio_in, fg="purple", bg=bg_color)
+    audio_in_button.grid(row=3, column=3, pady=2)
 
-    # Key row
-    tk.Label(master, text="Key").grid(row=4, column=0, pady=2)
-    Test.key_label = tk.Label(master, text=Test.key)
-    Test.key_label.grid(row=4, column=1,  padx=5, pady=5)
-    Ref.key_label = tk.Label(master, text=Ref.key)
-    Ref.key_label.grid(row=4, column=4, padx=5, pady=5)
-
-    # Image
-    pic_path = os.path.join(ex_root.script_loc, 'TestSOC.png')
+    # Image row 4
+    pic_path = os.path.join(script_loc, 'screencast.png')
     picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
     label = tk.Label(master, image=picture)
-    label.grid(row=1, column=2, columnspan=2, rowspan=3, padx=5, pady=5)
-
-    # Option
-    tk.ttk.Separator(master, orient='horizontal').grid(row=5, columnspan=5, pady=5, sticky='ew')
-    option = tk.StringVar(master)
-    option.set(str(cf['others']['option']))
-    option_show = tk.StringVar(master)
-    option_show.set(str(cf['others']['option']))
-    sel = tk.OptionMenu(master, option, *sel_list)
-    sel.config(width=20)
-    sel.grid(row=6, padx=5, pady=5, sticky=tk.W)
-    option.trace_add('write', option_handler)
-    Test.label = tk.Label(master, text=Test.file_txt)
-    Test.label.grid(row=6, column=1, padx=5, pady=5)
-    Ref.label = tk.Label(master, text=Ref.file_txt)
-    Ref.label.grid(row=6, column=4, padx=5, pady=5)
-    Test.create_file_path_and_key(cf['others']['option'])
-    Ref.create_file_path_and_key(cf['others']['option'])
-
-    start = tk.StringVar(master)
-    start.set('')
-    start_label = tk.Label(master, text='copy start:')
-    start_label.grid(row=8, column=0, padx=5, pady=5)
-    start_button = tk.Button(master, text='', command=grab_start, fg="purple", bg=bg_color, wraplength=wrap_length,
-                             justify=tk.LEFT, font=("Arial", 8))
-    start_button.grid(sticky="W", row=8, column=1, columnspan=4, rowspan=2, padx=5, pady=5)
-
-    reset = tk.StringVar(master)
-    reset.set('')
-    reset_label = tk.Label(master, text='copy reset:')
-    reset_label.grid(row=10, column=0, padx=5, pady=5)
-    reset_button = tk.Button(master, text='', command=grab_reset, fg="purple", bg=bg_color, wraplength=wrap_length,
-                             justify=tk.LEFT, font=("Arial", 8))
-    reset_button.grid(sticky="W", row=10, column=1, columnspan=4, rowspan=2, padx=5, pady=5)
+    label.grid(row=4, column=3, columnspan=2, rowspan=3, padx=5, pady=5)
 
     ev1_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev1_label.grid(sticky="W", row=12, column=1, columnspan=4, padx=5, pady=5)
+    ev1_label.grid(sticky="W", row=5, column=1, columnspan=4, padx=5, pady=5)
 
     ev2_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev2_label.grid(sticky="W", row=13, column=1, columnspan=4, padx=5, pady=5)
+    ev2_label.grid(sticky="W", row=6, column=1, columnspan=4, padx=5, pady=5)
 
     ev3_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev3_label.grid(sticky="W", row=14, column=1, columnspan=4, padx=5, pady=5)
+    ev3_label.grid(sticky="W", row=7, column=1, columnspan=4, padx=5, pady=5)
 
     ev4_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev4_label.grid(sticky="W", row=15, column=1, columnspan=4, padx=5, pady=5)
+    ev4_label.grid(sticky="W", row=8, column=1, columnspan=4, padx=5, pady=5)
 
-    save_data_label = tk.Label(master, text='save data:')
-    save_data_label.grid(row=16, column=0, padx=5, pady=5)
-    save_data_button = tk.Button(master, text='save data', command=save_data, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    save_data_button.grid(sticky="W", row=16, column=1, padx=5, pady=5)
-    save_data_as_button = tk.Button(master, text='save as', command=save_data_as, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    save_data_as_button.grid(sticky="W", row=16, column=2, padx=5, pady=5)
-    clear_data_button = tk.Button(master, text='clear', command=clear_data, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.RIGHT)
-    clear_data_button.grid(sticky="W", row=16, column=3, padx=5, pady=5)
+    tk.ttk.Separator(master, orient='horizontal').grid(row=9, columnspan=5, pady=5, sticky='ew')
 
-    tk.ttk.Separator(master, orient='horizontal').grid(row=17, columnspan=5, pady=5, sticky='ew')
-    run_button = tk.Button(master, text='Compare', command=compare_run, fg="green", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    run_button.grid(row=18, column=0, padx=5, pady=5)
-
-    tk.ttk.Separator(master, orient='horizontal').grid(row=19, columnspan=5, pady=5, sticky='ew')
-    choose_label = tk.Label(master, text='choose existing files:')
-    choose_label.grid(row=20, column=0, padx=5, pady=5)
-    run_sim_choose_button = tk.Button(master, text='Compare Run Sim Choose', command=compare_run_sim_choose, fg="blue", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    run_sim_choose_button.grid(sticky="W", row=20, column=1, padx=5, pady=5)
-    run_run_choose_button = tk.Button(master, text='Compare Run Run Choose', command=compare_run_run_choose, fg="blue", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    run_run_choose_button.grid(sticky="W", row=20, column=2, padx=5, pady=5)
+    # Action row 10
+    tk.Label(master, text="Action").grid(row=10, column=0, pady=2)
+    record_label = tk.Label(master, text='Action:')
+    record_label.grid(row=10, column=0, padx=5, pady=5)
+    record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
+    record_button.grid(sticky="W", row=10, column=1, padx=5, pady=5)
 
     # Begin
-    option_handler()
+    # option_handler()
     master.mainloop()
