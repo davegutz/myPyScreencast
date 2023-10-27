@@ -335,19 +335,16 @@ if __name__ == '__main__':
     picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
     label = tk.Label(master, image=picture)
     label.grid(row=row, column=0, columnspan=2, rowspan=3, padx=5, pady=5)
-    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=row, column=3, pady=2, sticky=tk.E)
 
     # Instructions
     doc = """Screencast:  RECORD while a video is playing full screen.\n \
     - instr a long line.\n \
     - instr."""
-    row_inst = row + 1
+    tk.Label(master, text=doc, fg="black", justify='left').grid(row=row, column=3, pady=2)
     for i in range(3):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
-    tk.Label(master, text=doc, fg="black", justify='left').grid(row=row_inst, column=3, pady=2)
 
 
     # Name row
@@ -413,6 +410,11 @@ if __name__ == '__main__':
         
     row += 1
     tk.ttk.Separator(master, orient='horizontal').grid(row=row, columnspan=5, pady=5, sticky='ew')
+
+    # Silent row
+    row += 1
+    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
+    silent_button.grid(row=row, column=0, pady=2, sticky=tk.W)
 
     # Action row
     row += 1
