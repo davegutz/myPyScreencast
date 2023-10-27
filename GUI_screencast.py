@@ -233,10 +233,10 @@ if __name__ == '__main__':
     video_in = tk.StringVar(master, cf[plate]['video_in'])
     audio_grabber = tk.StringVar(master, cf[plate]['audio_grabber'])
     audio_in = tk.StringVar(master, cf[plate]['audio_in'])
-    silent = tk.BooleanVar(master, bool(cf[plate]['silent']))
-    print(f"cf {silent.get()=}")
-
-    print(f"init {silent.get()}")
+    if cf[plate]['silent'] == 'False':
+        silent = tk.BooleanVar(master, False)
+    else:
+        silent = tk.BooleanVar(master, True)
     video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
 
     # Name row 0
