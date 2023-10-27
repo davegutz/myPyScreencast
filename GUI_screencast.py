@@ -417,13 +417,21 @@ if __name__ == '__main__':
     silent_button.grid(row=row, column=0, pady=2, sticky=tk.W)
 
     # Action row
+    for i in range(2):
+        row += i
+        blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
+        blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
     row += 1
-    record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    record_button.grid(sticky="W", row=row, column=0, padx=5, pady=5)
+    record_button = tk.Button(master, text='  RECORD  ', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.CENTER)
+    record_button.grid(row=row, column=0, padx=5, pady=5)
     sync_label = tk.Label(master, text='Sync Only:')
     sync_label.grid(row=row, column=2, padx=5, pady=5, sticky=tk.E)
     sync_button = tk.Button(master, text='REPEAT SYNC', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
     sync_button.grid(row=row, column=3, padx=5, pady=5, sticky=tk.W)
+    for i in range(2):
+        row += i
+        blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
+        blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
 
     print(f"after init before handler")
 
