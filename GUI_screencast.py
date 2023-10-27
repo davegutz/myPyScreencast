@@ -178,18 +178,20 @@ def record():
     if title.get() == '<enter title>' or title.get() == '' or title.get() == 'None':
         enter_title()
     if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
-        raw_file, result_ready = screencast(silent=silent.get(),
-                                            video_grabber=video_grabber.get(), video_in=video_in.get(),
-                                            audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
-                                            crf=crf.get(),
-                                            rec_time=rec_time.get(),
-                                            output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
-        if result_ready:
+        rf, rr = screencast(silent=silent.get(),
+                            video_grabber=video_grabber.get(), video_in=video_in.get(),
+                            audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
+                            crf=crf.get(),
+                            rec_time=rec_time.get(),
+                            output_file=raw_file.get())
+        raw_file.set(rf)  # screencast may null filename if fails
+        result_ready.set(rr)
+        if result_ready.get():
             if video_delay.get() >= 0.0:
-                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file,
+                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
                                  output_file=os.path.join(os.getcwd(), destination_path.get()))
             else:
-                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file,
+                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
                                  output_file=os.path.join(os.getcwd(), destination_path.get()))
     else:
         print('aborting print....need to enter title.  Presently = ', title.get())
@@ -197,9 +199,35 @@ def record():
     record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
+def result_ready_handler(*args):
+    print(f"destination_path_handler")
+    if os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()) > 0:  # bytes
+        if result_ready.get():
+            overwriting.set(False)
+            destination_folder_button.config(bg='green')
+            title_button.config(bg='green')
+        else:
+            overwriting.set(True)
+            destination_folder_button.config(bg=bg_color)
+            title_button.config(bg=bg_color)
+
+
 def silent_handler(*args):
     cf[plate]['silent'] = str(silent.get())
     cf.save_to_file()
+
+
+def sync():
+    if result_ready.get():
+        if video_delay.get() >= 0.0:
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file,
+                             output_file=os.path.join(os.getcwd(), destination_path.get()))
+        else:
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file,
+                             output_file=os.path.join(os.getcwd(), destination_path.get()))
+    else:
+        print("record first *******")
+    sync_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
 if __name__ == '__main__':
@@ -278,6 +306,8 @@ if __name__ == '__main__':
     else:
         overwriting = tk.BooleanVar(master, True)
     print(f"after load {overwriting.get()}")
+    raw_file = tk.StringVar(master, os.path.join(os.getcwd(), 'screencast.mkv'))
+    result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
 
     # Name row 0
     destination_folder_button = None
@@ -351,6 +381,10 @@ if __name__ == '__main__':
     record_label.grid(row=11, column=0, padx=5, pady=5)
     record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
     record_button.grid(sticky="W", row=11, column=1, padx=5, pady=5)
+    sync_label = tk.Label(master, text='Sync Only:')
+    sync_label.grid(row=11, column=3, padx=5, pady=5)
+    sync_button = tk.Button(master, text='REPEAT SYNC', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
+    sync_button.grid(sticky="W", row=11, column=4, padx=5, pady=5)
 
     print(f"after init before handler")
 
@@ -359,4 +393,6 @@ if __name__ == '__main__':
     destination_path.trace_add('write', destination_path_handler)
     silent_handler()
     silent.trace_add('write', silent_handler)
+    result_ready_handler()
+    result_ready.trace_add('write', result_ready_handler)
     master.mainloop()
