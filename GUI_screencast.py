@@ -121,13 +121,19 @@ def enter_rec_time():
     time_button.config(text=rec_time.get())
 
 
-def enter_title():
-    title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title"))
-    if title.get() == '':
-        title.set('enter title')
+def enter_title(title_='', init=False):
+    title.set(title_)
+    if title_ == '' and not init:
+        title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title"))
+    if title.get() == '' or title.get() == '<enter title>':
+        title.set('<enter title>')
+        title_button.config(bg='pink')
+    else:
+        title_button.config(bg=bg_color)
     cf[plate]['title'] = title.get()
     cf.save_to_file()
     title_button.config(text=title.get())
+    destination_path.set(os.path.join(destination_folder.get(), title.get()+'.mkv'))
 
 
 def enter_video_grabber():
@@ -139,21 +145,32 @@ def enter_video_in():
 
 
 def record():
-    raw_file, result_ready = screencast(silent=silent.get(),
-                                        video_grabber=video_grabber.get(), video_in=video_in.get(),
-                                        audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
-                                        crf=crf.get(),
-                                        rec_time=rec_time.get(),
-                                        output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
-    if result_ready:
-        if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file,
-                             output_file=os.path.join(os.getcwd(), destination_path.get()))
-        else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file,
-                             output_file=os.path.join(os.getcwd(), destination_path.get()))
+    if title.get() == '<enter title>' or title.get() == '' or title.get() == 'None':
+        enter_title()
+    if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
+        raw_file, result_ready = screencast(silent=silent.get(),
+                                            video_grabber=video_grabber.get(), video_in=video_in.get(),
+                                            audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
+                                            crf=crf.get(),
+                                            rec_time=rec_time.get(),
+                                            output_file=os.path.join(os.getcwd(), 'screencast.mkv'))
+        if result_ready:
+            if video_delay.get() >= 0.0:
+                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file,
+                                 output_file=os.path.join(os.getcwd(), destination_path.get()))
+            else:
+                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file,
+                                 output_file=os.path.join(os.getcwd(), destination_path.get()))
+    else:
+        print('aborting print....need to enter title.  Presently = ', title.get())
 
     record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
+
+
+def silent_handler(*args):
+    print(f"silent handler {silent.get()=}")
+    cf[plate]['silent'] = str(silent.get())
+    cf.save_to_file()
 
 
 if __name__ == '__main__':
@@ -163,7 +180,7 @@ if __name__ == '__main__':
 
     # Configuration for entire folder selection read with filepaths
     def_dict = {
-                'Linux':   {"title":  'enter title of recording',
+                'Linux':   {"title":  '<enter title>',
                             "rec_time": '6.',
                             "crf": '25',
                             "video_grabber": 'x11grab',
@@ -172,7 +189,7 @@ if __name__ == '__main__':
                             "audio_in": 'default',
                             "silent": '1',
                             "video_delay": '0.0'},
-                'Windows': {"title": "enter title of recording",
+                'Windows': {"title": '<enter title>',
                             "rec_time": '6.',
                             "crf": '28',
                             "video_grabber": "gdigrab",
@@ -181,7 +198,7 @@ if __name__ == '__main__':
                             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
                             "silent": '1',
                             "video_delay": '0.0'},
-                'Darwin':  {"title":  'enter title of recording',
+                'Darwin':  {"title":  '<enter title>',
                             "rec_time": '6.',
                             "crf": '25',
                             "video_grabber": 'avfoundation',
@@ -206,7 +223,7 @@ if __name__ == '__main__':
     master.wm_minsize(width=min_width, height=main_height)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(master, os.getcwd())
-    destination_folder = tk.StringVar(master, os.path.join(cwd_path.get(), './'))
+    destination_folder = tk.StringVar(master, cf[plate]['folder'])
     master.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(master, cf[plate]['title'])
     destination_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'.mkv'))
@@ -217,9 +234,14 @@ if __name__ == '__main__':
     audio_grabber = tk.StringVar(master, cf[plate]['audio_grabber'])
     audio_in = tk.StringVar(master, cf[plate]['audio_in'])
     silent = tk.BooleanVar(master, bool(cf[plate]['silent']))
+    print(f"cf {silent.get()=}")
+
+    print(f"init {silent.get()}")
     video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
 
     # Name row 0
+    destination_folder_button = None
+    title_button = None
     if platform.system() == 'Darwin':
         folder_button = tktt.TTButton(master, text=destination_folder.get(), command=enter_destination_folder,
                                       fg="blue", bg=bg_color)
@@ -230,12 +252,13 @@ if __name__ == '__main__':
                                   fg="blue", bg=bg_color)
         title_button = tk.Button(master, text=title.get(), command=enter_title,
                                   fg="blue", bg=bg_color)
+    enter_title(cf[plate]['title'], True)
     destination_folder_button.grid(row=0, column=0, pady=2, sticky=tk.N)
     title_button.grid(row=0, column=1, pady=2, sticky=tk.N)
     tk.Label(master, text=".mkv", fg="blue").grid(row=0, column=2, sticky=tk.N, pady=2)
-    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent,
-                                   onvalue=True, offvalue=False)
+    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
     silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
+    silent.trace_add('write', silent_handler)
 
     # Recording length row 1
     tk.Label(master, text="Recording length, seconds:").grid(row=1, column=0, pady=2)
@@ -289,5 +312,5 @@ if __name__ == '__main__':
     record_button.grid(sticky="W", row=11, column=1, padx=5, pady=5)
 
     # Begin
-    # option_handler()
+    silent_handler()
     master.mainloop()
