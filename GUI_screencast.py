@@ -111,10 +111,16 @@ def destination_path_handler(*args):
 
 def enter_audio_grabber():
     audio_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grabber parameter"))
+    cf[plate]['audio_grabber'] = audio_grabber.get()
+    cf.save_to_file()
+    audio_grabber_button.config(text=audio_grabber.get())
 
 
 def enter_audio_in():
     audio_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter"))
+    cf[plate]['audio_in'] = audio_in.get()
+    cf.save_to_file()
+    audio_in_button.config(text=audio_in.get())
 
 
 def enter_crf():
@@ -122,11 +128,6 @@ def enter_crf():
     cf[plate]['crf'] = str(crf.get())
     cf.save_to_file()
     crf_button.config(text=crf.get())
-
-
-    cf[plate]['folder'] = str(destination_folder.get())
-    cf.save_to_file()
-    destination_folder_button.config(text=destination_folder.get())
 
 
 def enter_destination_folder(folder_='', init=False):
@@ -166,12 +167,25 @@ def enter_title(title_='', init=False):
     destination_path.set(os.path.join(destination_folder.get(), title.get()+'.mkv'))
 
 
+def enter_video_delay():
+    video_delay.set(float(tk.simpledialog.askstring(title=__file__, prompt="enter seconds video delay audio +/-")))
+    cf[plate]['video_delay'] = str(video_delay.get())
+    cf.save_to_file()
+    video_delay_button.config(text=str(video_delay.get()))
+
+
 def enter_video_grabber():
     video_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grabber parameter"))
+    cf[plate]['video_grabber'] = video_grabber.get()
+    cf.save_to_file()
+    video_grabber_button.config(text=video_grabber.get())
 
 
 def enter_video_in():
     video_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter"))
+    cf[plate]['video_in'] = video_in.get()
+    cf.save_to_file()
+    video_in_button.config(text=video_in.get())
 
 
 def record():
@@ -187,16 +201,17 @@ def record():
         raw_file.set(rf)  # screencast may null filename if fails
         result_ready.set(rr)
         if result_ready.get():
-            if video_delay.get() >= 0.0:
-                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
-                                 output_file=os.path.join(os.getcwd(), destination_path.get()))
-            else:
-                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
-                                 output_file=os.path.join(os.getcwd(), destination_path.get()))
+            record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
+        sync()
+        # if result_ready.get():
+        #     if video_delay.get() >= 0.0:
+        #         delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
+        #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
+        #     else:
+        #         delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
+        #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
     else:
         print('aborting print....need to enter title.  Presently = ', title.get())
-
-    record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
 def result_ready_handler(*args):
@@ -206,10 +221,14 @@ def result_ready_handler(*args):
             overwriting.set(False)
             destination_folder_button.config(bg='green')
             title_button.config(bg='green')
+            record_button.config(bg=bg_color, activebackground='green', fg='black', activeforeground='purple')
+            sync_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
         else:
             overwriting.set(True)
             destination_folder_button.config(bg=bg_color)
             title_button.config(bg=bg_color)
+            record_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
+            sync_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
 
 
 def silent_handler(*args):
@@ -220,14 +239,14 @@ def silent_handler(*args):
 def sync():
     if result_ready.get():
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file,
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
                              output_file=os.path.join(os.getcwd(), destination_path.get()))
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file,
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
                              output_file=os.path.join(os.getcwd(), destination_path.get()))
+            sync_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
     else:
         print("record first *******")
-    sync_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
 if __name__ == '__main__':
@@ -308,8 +327,10 @@ if __name__ == '__main__':
     print(f"after load {overwriting.get()}")
     raw_file = tk.StringVar(master, os.path.join(os.getcwd(), 'screencast.mkv'))
     result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
+    row = 0
 
-    # Name row 0
+    # Name row
+    row += 1
     destination_folder_button = None
     title_button = None
     if platform.system() == 'Darwin':
@@ -325,66 +346,69 @@ if __name__ == '__main__':
 
     enter_destination_folder(cf[plate]['destination_folder'], True)
     enter_title(cf[plate]['title'], True)
-    destination_folder_button.grid(row=0, column=0, pady=2, sticky=tk.N)
-    title_button.grid(row=0, column=1, pady=2, sticky=tk.N)
-    tk.Label(master, text=".mkv", fg="blue").grid(row=0, column=2, sticky=tk.N, pady=2)
+    destination_folder_button.grid(row=row, column=0, pady=2, sticky=tk.N)
+    title_button.grid(row=row, column=1, pady=2, sticky=tk.N)
+    tk.Label(master, text=".mkv", fg="blue").grid(row=row, column=2, sticky=tk.N, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
+    silent_button.grid(row=row, column=3, pady=2, sticky=tk.N)
 
-    # Recording length row 1
-    tk.Label(master, text="Recording length, seconds:").grid(row=1, column=0, pady=2)
+    # Recording length row
+    row += 1
+    tk.Label(master, text="Recording length, seconds:").grid(row=row, column=0, pady=2, sticky=tk.E)
     time_button = tk.Button(master, text=rec_time.get(), command=enter_rec_time, fg="green", bg=bg_color)
-    time_button.grid(row=1, column=1, pady=2)
+    time_button.grid(row=row, column=1, pady=2)
 
-    # Quality row 2
-    tk.Label(master, text="crf quality for ffmpeg:").grid(row=2, column=0, pady=2)
+    # Quality row
+    row += 1
+    tk.Label(master, text="crf quality for ffmpeg:").grid(row=row, column=0, pady=2, sticky=tk.E)
     crf_button = tk.Button(master, text=crf.get(), command=enter_crf, fg="green", bg=bg_color)
-    crf_button.grid(row=2, column=1, pady=2)
+    crf_button.grid(row=row, column=1, pady=2)
 
-    # Video row 3
-    tk.Label(master, text="Video").grid(row=3, column=0, pady=2)
+    # Video row
+    row += 1
+    tk.Label(master, text="Video").grid(row=row, column=0, pady=2, sticky=tk.E)
     video_grabber_button = tk.Button(master, text=video_grabber.get(), command=enter_video_grabber, fg="purple", bg=bg_color)
-    video_grabber_button.grid(row=3, column=1, pady=2)
+    video_grabber_button.grid(row=row, column=1, pady=2)
     video_in_button = tk.Button(master, text=video_in.get(), command=enter_video_in, fg="purple", bg=bg_color)
-    video_in_button.grid(row=3, column=3, pady=2)
+    video_in_button.grid(row=row, column=3, pady=2)
 
-    # Audio row 4
-    tk.Label(master, text="Audio").grid(row=4, column=0, pady=2)
+    # Audio row
+    row += 1
+    tk.Label(master, text="Audio").grid(row=row, column=0, pady=2, sticky=tk.E)
     audio_grabber_button = tk.Button(master, text=audio_grabber.get(), command=enter_audio_grabber, fg="purple", bg=bg_color)
-    audio_grabber_button.grid(row=4, column=1, pady=2)
+    audio_grabber_button.grid(row=row, column=1, pady=2)
     audio_in_button = tk.Button(master, text=audio_in.get(), command=enter_audio_in, fg="purple", bg=bg_color)
-    audio_in_button.grid(row=4, column=3, pady=2)
+    audio_in_button.grid(row=row, column=3, pady=2)
 
-    # Image row 5
+    # Image row
+    row += 1
     pic_path = os.path.join(script_loc, 'screencast.png')
     picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
     label = tk.Label(master, image=picture)
-    label.grid(row=5, column=3, columnspan=2, rowspan=3, padx=5, pady=5)
+    label.grid(row=row, column=3, columnspan=2, rowspan=3, padx=5, pady=5)
 
-    ev1_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev1_label.grid(sticky="W", row=6, column=1, columnspan=4, padx=5, pady=5)
+    for i in range(5):
+        row += i
+        blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
+        blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
+        
+    row += 1
+    tk.ttk.Separator(master, orient='horizontal').grid(row=row, columnspan=5, pady=5, sticky='ew')
 
-    ev2_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev2_label.grid(sticky="W", row=7, column=1, columnspan=4, padx=5, pady=5)
-
-    ev3_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev3_label.grid(sticky="W", row=8, column=1, columnspan=4, padx=5, pady=5)
-
-    ev4_label = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
-    ev4_label.grid(sticky="W", row=9, column=1, columnspan=4, padx=5, pady=5)
-
-    tk.ttk.Separator(master, orient='horizontal').grid(row=10, columnspan=5, pady=5, sticky='ew')
-
-    # Action row 11
-    tk.Label(master, text="Action").grid(row=11, column=0, pady=2)
+    # Action row
+    row += 1
+    tk.Label(master, text="Action").grid(row=row, column=0, pady=2, sticky=tk.W)
     record_label = tk.Label(master, text='Action:')
-    record_label.grid(row=11, column=0, padx=5, pady=5)
+    record_label.grid(row=row, column=0, padx=5, pady=5)
     record_button = tk.Button(master, text='RECORD', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    record_button.grid(sticky="W", row=11, column=1, padx=5, pady=5)
+    record_button.grid(sticky="W", row=row, column=1, padx=5, pady=5)
+    tk.Label(master, text="Video delay +/-").grid(row=row, column=2, pady=2)
+    video_delay_button = tk.Button(master, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
+    video_delay_button.grid(row=row, column=3, pady=2)
     sync_label = tk.Label(master, text='Sync Only:')
-    sync_label.grid(row=11, column=3, padx=5, pady=5)
+    sync_label.grid(row=row, column=4, padx=5, pady=5)
     sync_button = tk.Button(master, text='REPEAT SYNC', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    sync_button.grid(sticky="W", row=11, column=4, padx=5, pady=5)
+    sync_button.grid(sticky="W", row=row, column=5, padx=5, pady=5)
 
     print(f"after init before handler")
 
