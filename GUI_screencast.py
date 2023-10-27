@@ -28,7 +28,7 @@ else:
 from tkinter import ttk, filedialog
 import tkinter.simpledialog
 from screencast import screencast, delay_audio_sync, delay_video_sync
-# import tkinter.messagebox
+import tkinter.messagebox
 import pyperclip
 import platform
 global putty_shell
@@ -92,6 +92,17 @@ def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
 
 
+def destination_path_handler(*args):
+    if os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()) > 0:  # bytes
+        confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
+        if confirmation is False:
+            print('enter different folder or title first row')
+            tkinter.messagebox.showwarning(message='enter different folder or title first row')
+            overwriting.set(False)
+        else:
+            overwriting.set(True)
+
+
 def enter_audio_grabber():
     audio_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grabber parameter"))
 
@@ -107,11 +118,24 @@ def enter_crf():
     crf_button.config(text=crf.get())
 
 
-def enter_destination_folder():
-    destination_folder.set(tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=destination_folder.get()))
     cf[plate]['folder'] = str(destination_folder.get())
     cf.save_to_file()
     destination_folder_button.config(text=destination_folder.get())
+
+
+def enter_destination_folder(folder_='', init=False):
+    destination_folder.set(folder_)
+    if folder_ == '' and not init:
+        destination_folder.set(tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=destination_folder.get()))
+    if destination_folder.get() == '' or destination_folder.get() == '<enter destination folder>':
+        destination_folder.set('<enter destination folder>')
+        destination_folder_button.config(bg='pink')
+    else:
+        destination_folder_button.config(bg=bg_color)
+    cf[plate]['destination_folder'] = destination_folder.get()
+    cf.save_to_file()
+    destination_folder_button.config(text=destination_folder.get())
+    destination_path.set(os.path.join(destination_folder.get(), title.get()+'.mkv'))
 
 
 def enter_rec_time():
@@ -168,7 +192,6 @@ def record():
 
 
 def silent_handler(*args):
-    print(f"silent handler {silent.get()=}")
     cf[plate]['silent'] = str(silent.get())
     cf.save_to_file()
 
@@ -180,7 +203,8 @@ if __name__ == '__main__':
 
     # Configuration for entire folder selection read with filepaths
     def_dict = {
-                'Linux':   {"title":  '<enter title>',
+                'Linux':   {"destination_folder": '<enter destination folder>',
+                            "title":  '<enter title>',
                             "rec_time": '6.',
                             "crf": '25',
                             "video_grabber": 'x11grab',
@@ -188,8 +212,10 @@ if __name__ == '__main__':
                             "audio_grabber": 'pulse',
                             "audio_in": 'default',
                             "silent": '1',
-                            "video_delay": '0.0'},
-                'Windows': {"title": '<enter title>',
+                            "video_delay": '0.0',
+                            "overwriting": '0'},
+                'Windows': {"destination_folder": '<enter destination folder>',
+                            "title": '<enter title>',
                             "rec_time": '6.',
                             "crf": '28',
                             "video_grabber": "gdigrab",
@@ -197,8 +223,10 @@ if __name__ == '__main__':
                             "audio_grabber": 'dshow',
                             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
                             "silent": '1',
-                            "video_delay": '0.0'},
-                'Darwin':  {"title":  '<enter title>',
+                            "video_delay": '0.0',
+                            "overwriting": '0'},
+                'Darwin':  {"destination_folder": '<enter destination folder>',
+                            "title":  '<enter title>',
                             "rec_time": '6.',
                             "crf": '25',
                             "video_grabber": 'avfoundation',
@@ -206,7 +234,8 @@ if __name__ == '__main__':
                             "audio_grabber": '',
                             "audio_in": '2',
                             "silent": '1',
-                            "video_delay": '0.0'},
+                            "video_delay": '0.0',
+                            "overwriting": '0'},
                 }
     cf = Begini(__file__, def_dict)
 
@@ -223,7 +252,7 @@ if __name__ == '__main__':
     master.wm_minsize(width=min_width, height=main_height)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(master, os.getcwd())
-    destination_folder = tk.StringVar(master, cf[plate]['folder'])
+    destination_folder = tk.StringVar(master, cf[plate]['destination_folder'])
     master.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(master, cf[plate]['title'])
     destination_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'.mkv'))
@@ -238,6 +267,11 @@ if __name__ == '__main__':
     else:
         silent = tk.BooleanVar(master, True)
     video_delay = tk.DoubleVar(master, float(cf[plate]['video_delay']))
+    if cf[plate]['overwriting'] == 'False':
+        overwriting = tk.BooleanVar(master, False)
+    else:
+        overwriting = tk.BooleanVar(master, True)
+    print(f"after load {overwriting.get()}")
 
     # Name row 0
     destination_folder_button = None
@@ -252,6 +286,9 @@ if __name__ == '__main__':
                                   fg="blue", bg=bg_color)
         title_button = tk.Button(master, text=title.get(), command=enter_title,
                                   fg="blue", bg=bg_color)
+    destination_path.trace_add('write', destination_path_handler)
+
+    enter_destination_folder(cf[plate]['destination_folder'], True)
     enter_title(cf[plate]['title'], True)
     destination_folder_button.grid(row=0, column=0, pady=2, sticky=tk.N)
     title_button.grid(row=0, column=1, pady=2, sticky=tk.N)
@@ -259,6 +296,8 @@ if __name__ == '__main__':
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
     silent_button.grid(row=0, column=3, pady=2, sticky=tk.N)
     silent.trace_add('write', silent_handler)
+    overwriting_button = tk.Checkbutton(master, text='overwriting', bg=bg_color, variable=overwriting, onvalue=True, offvalue=False)
+    overwriting_button.grid(row=0, column=4, pady=2, sticky=tk.N)
 
     # Recording length row 1
     tk.Label(master, text="Recording length, seconds:").grid(row=1, column=0, pady=2)
@@ -312,5 +351,6 @@ if __name__ == '__main__':
     record_button.grid(sticky="W", row=11, column=1, padx=5, pady=5)
 
     # Begin
+    destination_path_handler()
     silent_handler()
     master.mainloop()
