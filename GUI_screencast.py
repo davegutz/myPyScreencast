@@ -327,9 +327,18 @@ if __name__ == '__main__':
     print(f"after load {overwriting.get()}")
     raw_file = tk.StringVar(master, os.path.join(os.getcwd(), 'screencast.mkv'))
     result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
-    row = 0
+    row = -1
 
-    for i in range(1):
+    # Image row
+    row += 1
+    pic_path = os.path.join(script_loc, 'screencast.png')
+    picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
+    label = tk.Label(master, image=picture)
+    label.grid(row=row, column=0, columnspan=2, rowspan=3, padx=5, pady=5)
+    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
+    silent_button.grid(row=row, column=4, pady=2, sticky=tk.E)
+
+    for i in range(3):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
@@ -355,8 +364,6 @@ if __name__ == '__main__':
     tk.Label(master, text="/", fg="blue").grid(row=row, column=1, sticky=tk.W, pady=2)
     title_button.grid(row=row, column=2, pady=2, sticky=tk.W)
     tk.Label(master, text=".mkv", fg="blue").grid(row=row, column=3, sticky=tk.W, pady=2)
-    silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=row, column=4, pady=2, sticky=tk.E)
 
     # Recording length row
     row += 1
@@ -392,14 +399,7 @@ if __name__ == '__main__':
     video_delay_button = tk.Button(master, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
     video_delay_button.grid(row=row, column=2, pady=2, sticky=tk.W)
 
-    # Image row
-    row += 1
-    pic_path = os.path.join(script_loc, 'screencast.png')
-    picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
-    label = tk.Label(master, image=picture)
-    label.grid(row=row, column=2, columnspan=2, rowspan=3, padx=5, pady=5)
-
-    for i in range(4):
+    for i in range(1):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, columnspan=4, padx=5, pady=5)
