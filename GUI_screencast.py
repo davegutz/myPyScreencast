@@ -219,8 +219,8 @@ def result_ready_handler(*args):
     if os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()) > 0:  # bytes
         if result_ready.get():
             overwriting.set(False)
-            destination_folder_button.config(bg='green')
-            title_button.config(bg='green')
+            destination_folder_button.config(bg='lightgreen')
+            title_button.config(bg='lightgreen')
             record_button.config(bg=bg_color, activebackground='green', fg='black', activeforeground='purple')
             sync_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
         else:
