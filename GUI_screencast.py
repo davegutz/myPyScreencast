@@ -102,12 +102,16 @@ def enter_audio_in():
 
 def enter_crf():
     crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file"))
+    cf[plate]['crf'] = str(crf.get())
+    cf.save_to_file()
+    crf_button.config(text=crf.get())
 
 
 def enter_destination_folder():
-    print(f"{destination_folder.get()=}")
     destination_folder.set(tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=destination_folder.get()))
-    print(f"{destination_folder.get()=}")
+    cf[plate]['folder'] = str(destination_folder.get())
+    cf.save_to_file()
+    destination_folder_button.config(text=destination_folder.get())
 
 
 def enter_rec_time():
@@ -119,6 +123,8 @@ def enter_rec_time():
 
 def enter_title():
     title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title"))
+    if title.get() == '':
+        title.set('enter title')
     cf[plate]['title'] = title.get()
     cf.save_to_file()
     title_button.config(text=title.get())
@@ -220,11 +226,11 @@ if __name__ == '__main__':
         title_button = tktt.TTButton(master, text=title.get(), command=enter_title,
                                      fg="blue", bg=bg_color)
     else:
-        folder_button = tk.Button(master, text=destination_folder.get(), command=enter_destination_folder,
+        destination_folder_button = tk.Button(master, text=destination_folder.get(), command=enter_destination_folder,
                                   fg="blue", bg=bg_color)
         title_button = tk.Button(master, text=title.get(), command=enter_title,
                                   fg="blue", bg=bg_color)
-    folder_button.grid(row=0, column=0, pady=2, sticky=tk.N)
+    destination_folder_button.grid(row=0, column=0, pady=2, sticky=tk.N)
     title_button.grid(row=0, column=1, pady=2, sticky=tk.N)
     tk.Label(master, text=".mkv", fg="blue").grid(row=0, column=2, sticky=tk.N, pady=2)
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent,
