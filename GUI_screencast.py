@@ -339,14 +339,15 @@ if __name__ == '__main__':
     silent_button.grid(row=row, column=3, pady=2, sticky=tk.E)
 
     # Instructions
+    doc = """Screencast:  RECORD while a video is playing full screen.\n \
+    - instr a long line.\n \
+    - instr."""
     row_inst = row + 1
     for i in range(3):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
-    tk.Label(master, text="Screencast:  RECORD while a video is playing full screen.\n \
-- instr.\n \
-- instr.", fg="black").grid(row=row_inst, column=3, sticky=tk.N, pady=2)
+    tk.Label(master, text=doc, fg="black", justify='left').grid(row=row_inst, column=3, pady=2)
 
 
     # Name row
