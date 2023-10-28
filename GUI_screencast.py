@@ -73,6 +73,7 @@ class Global:
     def __init__(self, owner):
         self.sync_tuner_button = tk.Button(owner)
         self.video_delay_tuner_button = tk.Button(owner)
+        self.intermediate_file = tk.Label(owner)
 
 # Global methods
 def add_to_clip_board(text):
@@ -227,18 +228,18 @@ def record():
                             audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
                             crf=crf.get(),
                             rec_time=rec_time.get(),
-                            output_file=raw_file.get())
-        raw_file.set(rf)  # screencast may cause null filename if fails
+                            output_file=raw_file_path.get())
+        raw_file_path.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
         if result_ready.get():
             record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
         sync()
         # if result_ready.get():
         #     if video_delay.get() >= 0.0:
-        #         delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
+        #         delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file_path.get(),
         #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
         #     else:
-        #         delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
+        #         delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file_path.get(),
         #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
     else:
         print('aborting recording....need to enter title.  Presently = ', title.get())
@@ -267,10 +268,10 @@ def silent_handler(*args):
 def sync():
     if result_ready.get():
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file.get(),
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file_path.get(),
                              output_file=os.path.join(os.getcwd(), destination_path.get()))
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file_path.get(),
                              output_file=os.path.join(os.getcwd(), destination_path.get()))
         tuners.sync_tuner_button.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
@@ -354,7 +355,7 @@ if __name__ == '__main__':
     else:
         overwriting = tk.BooleanVar(master, True)
     print(f"after load {overwriting.get()}")
-    raw_file = tk.StringVar(master, os.path.join(os.getcwd(), 'screencast.mkv'))
+    raw_file_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'_unsync.mkv'))
     result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
     row = -1
 
@@ -442,18 +443,27 @@ if __name__ == '__main__':
     # Silent row
     row += 1
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    silent_button.grid(row=row, column=0, pady=2, sticky=tk.W)
+    silent_button.grid(row=row, column=0, pady=2)
 
-    # Action row
-    for i in range(2):
+    # Action rows
+    for i in range(1):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
     row += 1
-    record_button = tk.Button(master, text='  RECORD  ', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.CENTER)
+    tk.Label(master, text="Intermediate=").grid(row=row, column=2, pady=2, sticky=tk.E)
+    raw_file_path_label = tk.Label(master, text=raw_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    raw_file_path_label.grid(row=row, column=3, padx=5, pady=5)
+    raw_file_path_label.config(bg=bg_color)
+    for i in range(1):
+        row += i
+        blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
+        blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
+    row += 1
+    record_button = tk.Button(master, text='****    RECORD     ****', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.CENTER)
     record_button.grid(row=row, column=0, padx=5, pady=5)
     tuner_window_button = tk.Button(master, text="TUNER WINDOW", command=open_tuner_window)
-    tuner_window_button.grid(row=row, column=4, padx=5, pady=5, sticky=tk.E)
+    tuner_window_button.grid(row=row, column=2, padx=5, pady=5, sticky=tk.E)
 
     for i in range(2):
         row += i
