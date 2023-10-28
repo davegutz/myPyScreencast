@@ -32,6 +32,7 @@ import tkinter.messagebox
 import pyperclip
 import platform
 global putty_shell
+from datetime import timedelta
 
 
 # Begini - configuration class using .ini files
@@ -153,7 +154,7 @@ def enter_destination_folder(folder_='', init=False):
 
 
 def enter_rec_time():
-    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, seconds", initialvalue=rec_time.get()))
+    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, minutes", initialvalue=rec_time.get()))
     cf[plate]['rec_time'] = str(rec_time.get())
     cf.save_to_file()
     time_button.config(text=rec_time.get())
@@ -227,7 +228,7 @@ def record():
                             video_grabber=video_grabber.get(), video_in=video_in.get(),
                             audio_grabber=audio_grabber.get(), audio_in=audio_in.get(),
                             crf=crf.get(),
-                            rec_time=rec_time.get(),
+                            rec_time=rec_time.get()*60.,
                             output_file=raw_file_path.get())
         raw_file_path.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
@@ -287,7 +288,7 @@ if __name__ == '__main__':
     def_dict = {
                 'Linux':   {"destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
-                            "rec_time": '6.',
+                            "rec_time": '0.1',
                             "crf": '25',
                             "video_grabber": 'x11grab',
                             "video_in": ':0.0+0.0',
@@ -298,7 +299,7 @@ if __name__ == '__main__':
                             "overwriting": '0'},
                 'Windows': {"destination_folder": '<enter destination folder>',
                             "title": '<enter title>',
-                            "rec_time": '6.',
+                            "rec_time": '0.1',
                             "crf": '28',
                             "video_grabber": "gdigrab",
                             "video_in": 'desktop',
@@ -309,7 +310,7 @@ if __name__ == '__main__':
                             "overwriting": '0'},
                 'Darwin':  {"destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
-                            "rec_time": '6.',
+                            "rec_time": '0.1',
                             "crf": '25',
                             "video_grabber": 'avfoundation',
                             "video_in": '1',
@@ -400,9 +401,11 @@ if __name__ == '__main__':
 
     # Recording length row
     row += 1
-    tk.Label(master, text="Recording length, seconds:").grid(row=row, column=0, pady=2, sticky=tk.E)
+    tk.Label(master, text="Recording length, minutes:").grid(row=row, column=0, pady=2, sticky=tk.E)
     time_button = tk.Button(master, text=rec_time.get(), command=enter_rec_time, fg="green", bg=bg_color)
     time_button.grid(row=row, column=2, pady=2, sticky=tk.W)
+    hms = "hms=" + str(timedelta(minutes=rec_time.get()))
+    tk.Label(master, text=hms, wraplength=wrap_length, justify=tk.LEFT).grid(row=row, column=3, pady=2, sticky=tk.W)
 
     # Quality row
     row += 1
