@@ -33,6 +33,10 @@ import pyperclip
 import platform
 global putty_shell
 from datetime import timedelta
+# TODO:  move this and cut_short to util
+from Colors import Colors
+from screencast_util import run_shell_cmd
+import timeit
 
 
 # Begini - configuration class using .ini files
@@ -75,6 +79,9 @@ class Global:
         self.sync_tuner_button = tk.Button(owner)
         self.video_delay_tuner_button = tk.Button(owner)
         self.intermediate_file = tk.Label(owner)
+        self.short_file_path_label = tk.Label(owner)
+        self.start_short_button = tk.Button(owner)
+        self.stop_short_button = tk.Button(owner)
 
 # Global methods
 def add_to_clip_board(text):
@@ -98,6 +105,31 @@ def contain_all(testpath):
 
 def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
+
+
+def cut_short():
+    cmd = ( "ffmpeg - i {:s}".format(raw_file_path.get()) +
+            " - ss {:5.2f}".format(start_short.get()) +
+            " - to {:5.2f}".format(stop_short.get()) +
+            " - acodec copy -y {:s}".format(short_file_path.get()))
+    start_time = timeit.default_timer()
+    if silent.get() is False:
+        print(cmd + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(cmd, silent=silent.get())
+        print(Colors.reset)
+        print(cmd + '\n')
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+              Colors.reset, end='')
+        result_ready = True
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, short_file_path.get(), Colors.reset)
+    else:
+        result = run_shell_cmd(cmd, silent=silent.get())
+
+    print('')
 
 
 def destination_path_handler(*args):
@@ -160,6 +192,16 @@ def enter_rec_time():
     time_button.config(text=rec_time.get())
 
 
+def enter_start_short_time():
+    start_short.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes", initialvalue=start_short.get()))
+    tuners.start_short_button.config(text=start_short.get())
+
+
+def enter_stop_short_time():
+    stop_short.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes", initialvalue=stop_short.get()))
+    tuners.stop_short_button.config(text=stop_short.get())
+
+
 def enter_title(title_='', init=False):
     title.set(title_)
     if title_ == '' and not init:
@@ -203,7 +245,7 @@ def enter_video_in():
 def open_tuner_window():
     tuner_window = tk.Toplevel(master)
     tuner_window.title("Tuner")
-    tuner_window.geometry("400x400")
+    tuner_window.geometry("600x400")
     trow = -1
 
     # Video delay row
@@ -212,12 +254,27 @@ def open_tuner_window():
     tuners.video_delay_tuner_button = tk.Button(tuner_window, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
     tuners.video_delay_tuner_button.grid(row=trow, column=1, pady=2, sticky=tk.W)
 
+    # Shortcut row
+    trow += 1
+    tk.Label(tuner_window, text="Cut range, minutes:").grid(row=trow, column=0, pady=2, sticky=tk.E)
+    tuners.start_short_button = tk.Button(tuner_window, text=start_short.get(), command=enter_start_short_time, fg="green", bg=bg_color)
+    tuners.start_short_button.grid(row=trow, column=1, pady=2, sticky=tk.W)
+    tuners.stop_short_button = tk.Button(tuner_window, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
+    tuners.stop_short_button.grid(row=trow, column=2, pady=2, sticky=tk.W)
+    tk.Label(tuner_window, text="Short file=").grid(row=trow, column=3, pady=2, sticky=tk.E)
+    tuners.short_file_path_label = tk.Label(tuner_window, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.short_file_path_label.grid(row=trow, column=4, padx=5, pady=5)
+    tuners.short_file_path_label.config(bg=bg_color)
+
     # Action row
     trow += 1
     sync_tuner_label = tk.Label(tuner_window, text='Sync Only:')
     sync_tuner_label.grid(row=trow, column=0, padx=5, pady=5, sticky=tk.E)
     tuners.sync_tuner_button = tk.Button(tuner_window, text='REPEAT SYNC TO TUNE', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
     tuners.sync_tuner_button.grid(row=trow, column=1, padx=5, pady=5, sticky=tk.W)
+
+    short_file_path_handler()
+    short_file_path.trace_add('write', short_file_path_handler)
 
 
 def record():
@@ -250,6 +307,14 @@ def result_ready_handler(*args):
             destination_folder_button.config(bg=bg_color)
             title_button.config(bg=bg_color)
             record_button.config(bg='red', activebackground='red', fg='white', activeforeground='purple')
+
+
+def short_file_path_handler(*args):
+    print(f"short_file_path_handler")
+    if os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()) > 0:  # bytes
+        tuners.short_file_path_label.config(bg=bg_color)
+    else:
+        tuners.short_file_path_label.config(bg='yellow')
 
 
 def silent_handler(*args):
@@ -349,6 +414,9 @@ if __name__ == '__main__':
     print(f"after load {overwriting.get()}")
     raw_file_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'_unsync.mkv'))
     result_ready = tk.BooleanVar(master, os.path.isfile(destination_path.get()) and os.path.getsize(destination_path.get()))
+    start_short = tk.DoubleVar(master, 0.0)
+    stop_short = tk.DoubleVar(master, 0.0)
+    short_file_path = tk.StringVar(master, os.path.join(destination_folder.get(), title.get()+'_short.mkv'))
     row = -1
 
     # Image row
