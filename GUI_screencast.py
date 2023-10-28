@@ -178,6 +178,7 @@ def enter_video_delay():
     cf[plate]['video_delay'] = str(video_delay.get())
     cf.save_to_file()
     video_delay_button.config(text=str(video_delay.get()))
+    video_delay_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
     tuners.video_delay_tuner_button.config(text=str(video_delay.get()))
     tuners.sync_tuner_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
@@ -408,6 +409,12 @@ if __name__ == '__main__':
     crf_button = tk.Button(master, text=crf.get(), command=enter_crf, fg="green", bg=bg_color)
     crf_button.grid(row=row, column=2, pady=2, sticky=tk.W)
 
+    # Video delay row
+    row += 1
+    tk.Label(master, text="Video delay +/-").grid(row=row, column=0, pady=2, sticky=tk.E)
+    video_delay_button = tk.Button(master, text=str(video_delay.get()), command=enter_video_delay, fg="purple", bg=bg_color)
+    video_delay_button.grid(row=row, column=2, pady=2, sticky=tk.W)
+
     # Video row
     row += 1
     tk.Label(master, text="Video:").grid(row=row, column=0, pady=2, sticky=tk.E)
@@ -436,12 +443,6 @@ if __name__ == '__main__':
     row += 1
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
     silent_button.grid(row=row, column=0, pady=2, sticky=tk.W)
-
-    # Video delay row
-    row += 1
-    tk.Label(master, text="Video delay +/-").grid(row=row, column=0, pady=2, sticky=tk.E)
-    video_delay_button = tk.Button(master, text=str(video_delay.get()), command=enter_video_delay, fg="purple", bg=bg_color)
-    video_delay_button.grid(row=row, column=1, pady=2, sticky=tk.W)
 
     # Action row
     for i in range(2):
