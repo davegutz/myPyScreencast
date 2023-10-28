@@ -29,7 +29,7 @@ os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'char
 
 # Cut segment out and save to file
 def cut_short(waiting=False, silent=True, conversation=False,
-              raw_file = None, start_short = 0., stop_short = 0.,
+              raw_file=None, start_short=0., stop_short=0.,
               short_file=None):
 
     print(f"{waiting=} {silent=} {conversation=} {raw_file=} {start_short=} {stop_short=} {short_file=}")
@@ -37,10 +37,10 @@ def cut_short(waiting=False, silent=True, conversation=False,
     # Initialization
     result_ready = False
 
-    command = ( "ffmpeg - i {:s}".format(raw_file) +
-                " - ss {:5.2f}".format(start_short) +
-                " - to {:5.2f}".format(stop_short) +
-                " - acodec copy -y {:s}".format(short_file))
+    command =  ("ffmpeg -i {:s}".format(raw_file) +
+                " -ss {:5.2f}".format(start_short) +
+                " -to {:5.2f}".format(stop_short) +
+                " -acodec copy -y {:s}".format(short_file))
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -55,7 +55,7 @@ def cut_short(waiting=False, silent=True, conversation=False,
         print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
               Colors.reset, end='')
         result_ready = True
-        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, short_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
         if result == -1:
