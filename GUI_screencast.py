@@ -368,9 +368,54 @@ if __name__ == '__main__':
     label.grid(row=row, column=0, columnspan=2, rowspan=3, padx=5, pady=5)
 
     # Instructions
-    doc = """Screencast:  RECORD while a video is playing full screen.\n \
-    - instr a long line.\n \
-    - instr."""
+    if plate == 'Linux':
+        doc = """Screencast (Linux):  RECORD while a video is playing full screen.\n \
+    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
+    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'\n\
+    - Press 'RECORD' then go to the video streaming source and make it full screen.\n\
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
+      to extract a 10 - 20 second video from the final to iterate quickly.\n\
+    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
+      Framerate is hard-coded.\n\
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+      That is done outside this program."""
+    elif plate == 'Windows':
+        doc = """Screencast (Windows):  RECORD while a video is playing full screen.\n \
+    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
+    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.\n\
+    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'\n\
+    - Press 'RECORD' then go to the video streaming source and make it full screen.\n\
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
+      to extract a 10 - 20 second video from the final to iterate quickly.\n\
+    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
+      Framerate is hard-coded.\n\
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+      That is done outside this program."""
+    elif plate == 'Darwin':
+        doc = """Screencast (MacOS):  RECORD while a video is playing on Opera.\n \
+    - The MacOS version has choppy continuity and stutters (cause TBD).
+    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
+    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.\n\
+    - Open the streaming source using the Opera browser and have it all queued to begin.\n\
+    - Press 'RECORD' then go to the video streaming source and make Opera full screen (NOT the streaming source).\n\
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
+      to extract a 10 - 20 second video from the final to iterate quickly.\n\
+    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
+      Framerate is hard-coded.\n\
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+      That is done outside this program."""
+    else:
+        print('os unknown')
+
     tk.Label(master, text=doc, fg="black", justify='left').grid(row=row, column=3, pady=2)
     for i in range(3):
         row += i
