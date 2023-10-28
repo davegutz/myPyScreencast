@@ -203,7 +203,7 @@ def enter_video_in():
 def open_tuner_window():
     tuner_window = tk.Toplevel(master)
     tuner_window.title("Tuner")
-    tuner_window.geometry("200x200")
+    tuner_window.geometry("400x400")
     trow = -1
 
     # Video delay row
@@ -232,16 +232,7 @@ def record():
                             output_file=raw_file_path.get())
         raw_file_path.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
-        if result_ready.get():
-            record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
         sync()
-        # if result_ready.get():
-        #     if video_delay.get() >= 0.0:
-        #         delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file_path.get(),
-        #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
-        #     else:
-        #         delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file_path.get(),
-        #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
     else:
         print('aborting recording....need to enter title.  Presently = ', title.get())
 
@@ -253,12 +244,12 @@ def result_ready_handler(*args):
             overwriting.set(False)
             destination_folder_button.config(bg='lightgreen')
             title_button.config(bg='lightgreen')
-            record_button.config(bg=bg_color, activebackground='green', fg='black', activeforeground='purple')
+            record_button.config(bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
         else:
             overwriting.set(True)
             destination_folder_button.config(bg=bg_color)
             title_button.config(bg=bg_color)
-            record_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
+            record_button.config(bg='red', activebackground='red', fg='white', activeforeground='purple')
 
 
 def silent_handler(*args):
@@ -508,7 +499,7 @@ if __name__ == '__main__':
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
     row += 1
-    record_button = tk.Button(master, text='****    RECORD     ****', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.CENTER)
+    record_button = tk.Button(master, text='****    RECORD     ****', command=record, fg='white', bg='red', wraplength=wrap_length, justify=tk.CENTER)
     record_button.grid(row=row, column=0, padx=5, pady=5)
     tuner_window_button = tk.Button(master, text="TUNER WINDOW", command=open_tuner_window)
     tuner_window_button.grid(row=row, column=2, padx=5, pady=5, sticky=tk.E)
