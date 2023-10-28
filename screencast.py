@@ -27,6 +27,58 @@ from screencast_util import *
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
+# Cut segment out and save to file
+def cut_short(waiting=False, silent=True, conversation=False,
+              raw_file = None, start_short = 0., stop_short = 0.,
+              short_file=None):
+
+    print(f"{waiting=} {silent=} {conversation=} {raw_file=} {start_short=} {stop_short=} {short_file=}")
+
+    # Initialization
+    result_ready = False
+
+    command = ( "ffmpeg - i {:s}".format(raw_file) +
+                " - ss {:5.2f}".format(start_short) +
+                " - to {:5.2f}".format(stop_short) +
+                " - acodec copy -y {:s}".format(short_file))
+
+    start_time = timeit.default_timer()
+    if silent is False:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(command, silent=silent)
+        print(Colors.reset)
+        print(command + '\n')
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+              Colors.reset, end='')
+        result_ready = True
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
+    else:
+        result = run_shell_cmd(command, silent=silent)
+        if result == -1:
+            return result_ready, False
+        result_ready = True
+
+    print('')
+    display_result(short_file, platform.system(), silent, conversation=conversation)
+
+    # Delay a little to allow windows to pop up without hiding each other.
+    # The slower the computer, the more needed.
+    time.sleep(1.0)
+
+    # After all files are processed, ask for input to force hold to see stdout
+    if waiting is True:
+        if silent is False:
+            input('\nEnter anything to close window')
+        else:
+            messagebox.showinfo(title='screencast', message='files ready')
+
+    return short_file, result_ready
+
+
 # Delay audio to sync with video
 def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
     print(f"{delay=} {input_file=} {output_file=} {silent=}")

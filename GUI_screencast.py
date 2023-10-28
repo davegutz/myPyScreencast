@@ -27,7 +27,7 @@ else:
     import tkinter as tk
 from tkinter import ttk, filedialog
 import tkinter.simpledialog
-from screencast import screencast, delay_audio_sync, delay_video_sync
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_short
 import tkinter.messagebox
 import pyperclip
 import platform
@@ -82,6 +82,8 @@ class Global:
         self.short_file_path_label = tk.Label(owner)
         self.start_short_button = tk.Button(owner)
         self.stop_short_button = tk.Button(owner)
+        self.short_cut_button = tk.Button(owner)
+
 
 # Global methods
 def add_to_clip_board(text):
@@ -105,31 +107,6 @@ def contain_all(testpath):
 
 def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
-
-
-def cut_short():
-    cmd = ( "ffmpeg - i {:s}".format(raw_file_path.get()) +
-            " - ss {:5.2f}".format(start_short.get()) +
-            " - to {:5.2f}".format(stop_short.get()) +
-            " - acodec copy -y {:s}".format(short_file_path.get()))
-    start_time = timeit.default_timer()
-    if silent.get() is False:
-        print(cmd + '\n')
-        print(Colors.bg.brightblack, Colors.fg.wheat)
-        result = run_shell_cmd(cmd, silent=silent.get())
-        print(Colors.reset)
-        print(cmd + '\n')
-        if result == -1:
-            print(Colors.fg.blue, 'failed.', Colors.reset)
-            return None, False
-        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
-              Colors.reset, end='')
-        result_ready = True
-        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, short_file_path.get(), Colors.reset)
-    else:
-        result = run_shell_cmd(cmd, silent=silent.get())
-
-    print('')
 
 
 def destination_path_handler(*args):
@@ -245,7 +222,7 @@ def enter_video_in():
 def open_tuner_window():
     tuner_window = tk.Toplevel(master)
     tuner_window.title("Tuner")
-    tuner_window.geometry("600x400")
+    tuner_window.geometry("600x200")
     trow = -1
 
     # Video delay row
@@ -261,17 +238,15 @@ def open_tuner_window():
     tuners.start_short_button.grid(row=trow, column=1, pady=2, sticky=tk.W)
     tuners.stop_short_button = tk.Button(tuner_window, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
     tuners.stop_short_button.grid(row=trow, column=2, pady=2, sticky=tk.W)
+
+    # Cut short
+    trow += 1
+    tuners.short_cut_button = tk.Button(tuner_window, text="CUT IT OUT", command=short_cut)
+    tuners.short_cut_button.grid(row=trow, column=0, padx=5, pady=5, sticky=tk.E)
     tk.Label(tuner_window, text="Short file=").grid(row=trow, column=3, pady=2, sticky=tk.E)
     tuners.short_file_path_label = tk.Label(tuner_window, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.short_file_path_label.grid(row=trow, column=4, padx=5, pady=5)
     tuners.short_file_path_label.config(bg=bg_color)
-
-    # Action row
-    trow += 1
-    sync_tuner_label = tk.Label(tuner_window, text='Sync Only:')
-    sync_tuner_label.grid(row=trow, column=0, padx=5, pady=5, sticky=tk.E)
-    tuners.sync_tuner_button = tk.Button(tuner_window, text='REPEAT SYNC TO TUNE', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    tuners.sync_tuner_button.grid(row=trow, column=1, padx=5, pady=5, sticky=tk.W)
 
     short_file_path_handler()
     short_file_path.trace_add('write', short_file_path_handler)
@@ -307,6 +282,12 @@ def result_ready_handler(*args):
             destination_folder_button.config(bg=bg_color)
             title_button.config(bg=bg_color)
             record_button.config(bg='red', activebackground='red', fg='white', activeforeground='purple')
+
+
+def short_cut():
+    rs, fs = cut_short(silent=silent.get(), raw_file=raw_file_path.get(),
+                       start_short=start_short.get()*60., stop_short=stop_short.get()*60.,
+                       short_file=short_file_path.get())
 
 
 def short_file_path_handler(*args):
