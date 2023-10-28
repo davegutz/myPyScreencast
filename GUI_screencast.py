@@ -68,6 +68,12 @@ class Begini(ConfigParser):
         print('wrote', self.config_file_path)
 
 
+# Executive class to control the global variables
+class Global:
+    def __init__(self, owner):
+        self.sync_tuner_button = tk.Button(owner)
+        self.video_delay_tuner_button = tk.Button(owner)
+
 # Global methods
 def add_to_clip_board(text):
     pyperclip.copy(text)
@@ -110,21 +116,21 @@ def destination_path_handler(*args):
 
 
 def enter_audio_grabber():
-    audio_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grabber parameter"))
+    audio_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grabber parameter", initialvalue=audio_grabber.get()))
     cf[plate]['audio_grabber'] = audio_grabber.get()
     cf.save_to_file()
     audio_grabber_button.config(text=audio_grabber.get())
 
 
 def enter_audio_in():
-    audio_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter"))
+    audio_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter", initialvalue=audio_in.get()))
     cf[plate]['audio_in'] = audio_in.get()
     cf.save_to_file()
     audio_in_button.config(text=audio_in.get())
 
 
 def enter_crf():
-    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file"))
+    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file", initialvalue=crf.get()))
     cf[plate]['crf'] = str(crf.get())
     cf.save_to_file()
     crf_button.config(text=crf.get())
@@ -146,7 +152,7 @@ def enter_destination_folder(folder_='', init=False):
 
 
 def enter_rec_time():
-    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, seconds"))
+    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, seconds", initialvalue=rec_time.get()))
     cf[plate]['rec_time'] = str(rec_time.get())
     cf.save_to_file()
     time_button.config(text=rec_time.get())
@@ -155,7 +161,7 @@ def enter_rec_time():
 def enter_title(title_='', init=False):
     title.set(title_)
     if title_ == '' and not init:
-        title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title"))
+        title.set(tk.simpledialog.askstring(title=__file__, prompt="enter title", initialvalue=title.get()))
     if title.get() == '' or title.get() == '<enter title>':
         title.set('<enter title>')
         title_button.config(bg='pink')
@@ -168,24 +174,47 @@ def enter_title(title_='', init=False):
 
 
 def enter_video_delay():
-    video_delay.set(float(tk.simpledialog.askstring(title=__file__, prompt="enter seconds video delay audio +/-")))
+    video_delay.set(float(tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-", initialvalue=video_delay.get())))
     cf[plate]['video_delay'] = str(video_delay.get())
     cf.save_to_file()
     video_delay_button.config(text=str(video_delay.get()))
+    tuners.video_delay_tuner_button.config(text=str(video_delay.get()))
+    tuners.sync_tuner_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
 def enter_video_grabber():
-    video_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grabber parameter"))
+    video_grabber.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grabber parameter", initialvalue=video_grabber.get()))
     cf[plate]['video_grabber'] = video_grabber.get()
     cf.save_to_file()
     video_grabber_button.config(text=video_grabber.get())
 
 
 def enter_video_in():
-    video_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter"))
+    video_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter", initialvalue=video_in.get()))
     cf[plate]['video_in'] = video_in.get()
     cf.save_to_file()
     video_in_button.config(text=video_in.get())
+
+
+# Tuner window
+def open_tuner_window():
+    tuner_window = tk.Toplevel(master)
+    tuner_window.title("Tuner")
+    tuner_window.geometry("200x200")
+    trow = -1
+
+    # Video delay row
+    trow += 1
+    tk.Label(tuner_window, text="Video delay +/-").grid(row=trow, column=0, pady=2, sticky=tk.E)
+    tuners.video_delay_tuner_button = tk.Button(tuner_window, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
+    tuners.video_delay_tuner_button.grid(row=trow, column=1, pady=2, sticky=tk.W)
+
+    # Action row
+    trow += 1
+    sync_tuner_label = tk.Label(tuner_window, text='Sync Only:')
+    sync_tuner_label.grid(row=trow, column=0, padx=5, pady=5, sticky=tk.E)
+    tuners.sync_tuner_button = tk.Button(tuner_window, text='REPEAT SYNC TO TUNE', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
+    tuners.sync_tuner_button.grid(row=trow, column=1, padx=5, pady=5, sticky=tk.W)
 
 
 def record():
@@ -198,7 +227,7 @@ def record():
                             crf=crf.get(),
                             rec_time=rec_time.get(),
                             output_file=raw_file.get())
-        raw_file.set(rf)  # screencast may null filename if fails
+        raw_file.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
         if result_ready.get():
             record_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
@@ -211,7 +240,7 @@ def record():
         #         delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
         #                          output_file=os.path.join(os.getcwd(), destination_path.get()))
     else:
-        print('aborting print....need to enter title.  Presently = ', title.get())
+        print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
 def result_ready_handler(*args):
@@ -222,13 +251,11 @@ def result_ready_handler(*args):
             destination_folder_button.config(bg='lightgreen')
             title_button.config(bg='lightgreen')
             record_button.config(bg=bg_color, activebackground='green', fg='black', activeforeground='purple')
-            sync_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
         else:
             overwriting.set(True)
             destination_folder_button.config(bg=bg_color)
             title_button.config(bg=bg_color)
             record_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
-            sync_button.config(bg=bg_color, activebackground=bg_color, fg='red', activeforeground='purple')
 
 
 def silent_handler(*args):
@@ -244,7 +271,7 @@ def sync():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file.get(),
                              output_file=os.path.join(os.getcwd(), destination_path.get()))
-            sync_button.config(bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
+        tuners.sync_tuner_button.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
         print("record first *******")
 
@@ -303,6 +330,7 @@ if __name__ == '__main__':
     master = tk.Tk()
     master.title('Screencast')
     master.wm_minsize(width=min_width, height=main_height)
+    tuners = Global(master)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(master, os.getcwd())
     destination_folder = tk.StringVar(master, cf[plate]['destination_folder'])
@@ -346,7 +374,6 @@ if __name__ == '__main__':
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
 
-
     # Name row
     row += 1
     destination_folder_button = None
@@ -358,9 +385,9 @@ if __name__ == '__main__':
                                      fg="blue", bg=bg_color)
     else:
         destination_folder_button = tk.Button(master, text=destination_folder.get(), command=enter_destination_folder,
-                                  fg="blue", bg=bg_color)
+                                              fg="blue", bg=bg_color)
         title_button = tk.Button(master, text=title.get(), command=enter_title,
-                                  fg="blue", bg=bg_color)
+                                 fg="blue", bg=bg_color)
 
     enter_destination_folder(cf[plate]['destination_folder'], True)
     enter_title(cf[plate]['title'], True)
@@ -397,12 +424,6 @@ if __name__ == '__main__':
     audio_in_button = tk.Button(master, text=audio_in.get(), command=enter_audio_in, fg="purple", bg=bg_color)
     audio_in_button.grid(row=row, column=3, pady=2, sticky=tk.W)
 
-    # Video delay row
-    row += 1
-    tk.Label(master, text="Video delay +/-").grid(row=row, column=0, pady=2, sticky=tk.E)
-    video_delay_button = tk.Button(master, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
-    video_delay_button.grid(row=row, column=2, pady=2, sticky=tk.W)
-
     for i in range(1):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
@@ -416,6 +437,12 @@ if __name__ == '__main__':
     silent_button = tk.Checkbutton(master, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
     silent_button.grid(row=row, column=0, pady=2, sticky=tk.W)
 
+    # Video delay row
+    row += 1
+    tk.Label(master, text="Video delay +/-").grid(row=row, column=0, pady=2, sticky=tk.E)
+    video_delay_button = tk.Button(master, text=str(video_delay.get()), command=enter_video_delay, fg="purple", bg=bg_color)
+    video_delay_button.grid(row=row, column=1, pady=2, sticky=tk.W)
+
     # Action row
     for i in range(2):
         row += i
@@ -424,16 +451,13 @@ if __name__ == '__main__':
     row += 1
     record_button = tk.Button(master, text='  RECORD  ', command=record, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.CENTER)
     record_button.grid(row=row, column=0, padx=5, pady=5)
-    sync_label = tk.Label(master, text='Sync Only:')
-    sync_label.grid(row=row, column=2, padx=5, pady=5, sticky=tk.E)
-    sync_button = tk.Button(master, text='REPEAT SYNC', command=sync, fg="red", bg=bg_color, wraplength=wrap_length, justify=tk.LEFT)
-    sync_button.grid(row=row, column=3, padx=5, pady=5, sticky=tk.W)
+    tuner_window_button = tk.Button(master, text="TUNER WINDOW", command=open_tuner_window)
+    tuner_window_button.grid(row=row, column=4, padx=5, pady=5, sticky=tk.E)
+
     for i in range(2):
         row += i
         blank = tk.Label(master, text='', wraplength=wrap_length, justify=tk.LEFT)
         blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
-
-    print(f"after init before handler")
 
     # Begin
     destination_path_handler()
