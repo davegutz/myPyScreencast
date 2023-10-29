@@ -30,8 +30,8 @@ import tkinter.simpledialog
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_short
 import tkinter.messagebox
 import pyperclip
-global putty_shell
 from datetime import timedelta
+global putty_shell
 
 
 # Begini - configuration class using .ini files
@@ -218,7 +218,6 @@ def open_tuner_window():
     tuner_window = tk.Toplevel(root)
     tuner_window.title("Tuner")
     tuner_window.geometry("700x200")
-    trow = -1
 
     # Instructions
     tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
@@ -227,37 +226,37 @@ def open_tuner_window():
     - Set range to be within the length of original video.\n\
     - Press 'CUT IT OUT'.\n\
     - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
-    tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left')
-    tuner_doc.pack(side="left", fill='x', expand=True)
+    tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
+    tuner_doc.pack(side="left", fill='x')
 
     # Video delay row
     video_delay_tuner_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     video_delay_tuner_frame.pack(side=tk.TOP)
-    vd_label = tk.Label(video_delay_tuner_frame, text="Video delay +/-")
+    vd_label = tk.Label(video_delay_tuner_frame, text="Video delay +/-", bg=bg_color)
     tuners.video_delay_tuner_butt = tk.Button(video_delay_tuner_frame, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
-    vd_label.pack(side="left", fill='x', expand=True)
-    tuners.video_delay_tuner_butt.pack(side="left", fill='x', expand=True)
+    vd_label.pack(side="left", fill='x')
+    tuners.video_delay_tuner_butt.pack(side="left", fill='x')
 
     # Shortcut row
     shortcut_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     shortcut_frame.pack(side=tk.TOP)
-    shortcut_label = tk.Label(shortcut_frame, text="Cut range, minutes:")
+    shortcut_label = tk.Label(shortcut_frame, text="Cut range, minutes:", bg=bg_color)
     tuners.start_short_butt = tk.Button(shortcut_frame, text=start_short.get(), command=enter_start_short_time, fg="green", bg=bg_color)
     tuners.stop_short_butt = tk.Button(shortcut_frame, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
-    shortcut_label.pack(side="left", fill='x', expand=True)
-    tuners.start_short_butt.pack(side="left", fill='x', expand=True)
-    tuners.stop_short_butt.pack(side="left", fill='x', expand=True)
+    shortcut_label.pack(side="left", fill='x')
+    tuners.start_short_butt.pack(side="left", fill='x')
+    tuners.stop_short_butt.pack(side="left", fill='x')
 
     # Cut short
     cut_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     cut_short_frame.pack(side=tk.TOP)
     tuners.short_cut_butt = tk.Button(cut_short_frame, text="***CUT IT OUT***", command=short_cut, bg='red', fg='white')
-    cut_short_label = tk.Label(cut_short_frame, text="Short file=")
+    cut_short_label = tk.Label(cut_short_frame, text="Short file=", bg=bg_color)
     tuners.short_file_path_label = tk.Label(cut_short_frame, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.short_file_path_label.config(bg=bg_color)
-    tuners.short_cut_butt.pack(side="left", fill='x', expand=True)
-    cut_short_label.pack(side="left", fill='x', expand=True)
-    tuners.short_file_path_label.pack(side="left", fill='x', expand=True)
+    tuners.short_cut_butt.pack(side="left", fill='x')
+    cut_short_label.pack(side="left", fill='x')
+    tuners.short_file_path_label.pack(side="left", fill='x')
 
     short_file_path_handler()
     short_file_path.trace_add('write', short_file_path_handler)
@@ -268,8 +267,8 @@ def record():
         enter_title()
     if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
         rf, rr = screencast(silent=silent.get(),
-                            video_grab=video_grab.get(), video_in=video_in.get(),
-                            audio_grab=audio_grab.get(), audio_in=audio_in.get(),
+                            video_grabber=video_grab.get(), video_in=video_in.get(),
+                            audio_grabber=audio_grab.get(), audio_in=audio_in.get(),
                             crf=crf.get(),
                             rec_time=rec_time.get()*60.,
                             output_file=raw_file_path.get())
@@ -477,13 +476,13 @@ if __name__ == '__main__':
     pic_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     pic_frame.pack()
     image = tk.Frame(pic_frame, borderwidth=2, bg=box_color)
-    image.pack(side=tk.TOP, fill="x")
+    image.pack(side=tk.LEFT, fill="x")
     pic_path = os.path.join(script_loc, 'screencast.png')
     image.picture = tk.PhotoImage(file=pic_path).subsample(5, 5)
     image.label = tk.Label(image, image=image.picture)
-    image.label.pack(side="left")
-    doc_block = tk.Label(pic_frame, text=doc, fg="black", justify='left')
-    doc_block.pack(side="right")
+    image.label.pack(side="left", fill='x')
+    doc_block = tk.Label(pic_frame, text=doc, fg="black", justify='left', bg=bg_color)
+    doc_block.pack(side="right", fill='x')
 
     # Name row
     name_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -560,19 +559,19 @@ if __name__ == '__main__':
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
-    action_label.pack(side="left", fill='x')
     raw_file_path_label = tk.Label(action_frame, text=raw_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     raw_file_path_label.config(bg=bg_color)
-    raw_file_path_label.pack(side="left", fill='x')
+    raw_file_path_label.pack(side="right", fill='x')
+    action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
+    action_label.pack(side="right", fill='x')
 
     # Record row
     record_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     record_frame.pack(fill='x')
     record_butt = tk.Button(record_frame, text='****    RECORD     ****', command=record, fg='white', bg='red', wraplength=wrap_length, justify=tk.CENTER)
-    tuner_window_butt = tk.Button(record_frame, text="TUNER WINDOW", command=open_tuner_window)
+    tuner_window_butt = tk.Button(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     record_butt.pack(side="left", fill='x')
-    tuner_window_butt.pack(side="left", fill='x')
+    tuner_window_butt.pack(side="right", fill='x')
 
     # Begin
     folder_path_handler()
