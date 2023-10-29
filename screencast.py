@@ -172,7 +172,7 @@ def screencast(waiting=False, silent=True, conversation=False,
         return result_ready, None
 
     # Screencast
-    if audio_grabber is None:  # Darwin
+    if audio_grabber is None or audio_grabber == '':  # Darwin
         command = ("ffmpeg -threads 4" +
                    " -f {:s}".format(video_grabber) +
                    " -probesize 42M" +
