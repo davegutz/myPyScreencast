@@ -151,6 +151,33 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
         result_ready = True
 
 
+# Length of a video file
+def length(input_file = None, silent=True, save_stdout=True):
+
+    # String together the ffmpeg command
+    command = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {:s}".format(input_file)
+    if silent is False:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result_str = run_shell_cmd(command, silent=silent, save_stdout=save_stdout)
+        print(Colors.reset)
+        print(command + '\n')
+        if result_str == -1:
+            record_time = None
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+        else:
+            record_time = float(result_str[0]) / 60.
+        print(Colors.fg.orange, "  length is ", Colors.fg.blue, record_time, Colors.reset)
+    else:
+        result_str = run_shell_cmd(command, silent=silent, save_stdout=save_stdout)
+        if result_str == -1:
+            record_time = None
+        else:
+            record_time = float(result_str[0]) / 60.
+
+    return record_time
+
+
 # Wrap the ffmpeg program to make it useful and more portable
 def screencast(waiting=False, silent=True, conversation=False,
                video_grabber="gdigrab", video_in='desktop',

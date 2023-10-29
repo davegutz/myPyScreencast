@@ -25,9 +25,9 @@ if platform.system() == 'Darwin':
     import ttwidgets as tktt
 else:
     import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import filedialog
 import tkinter.simpledialog
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_short
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_short, length
 import tkinter.messagebox
 import pyperclip
 from datetime import timedelta
@@ -214,6 +214,13 @@ def folder_path_handler(*args):
             folder_butt.config(bg='yellow')
             title_butt.config(bg='yellow')
     cf.save_to_file()
+    record_time = length(raw_file_path.get(), silent=silent.get())
+    if record_time is not None:
+        rec_time.set(record_time / 60.)
+    else:
+        rec_time.set(0.)
+    hms = "hms=" + str(timedelta(minutes=rec_time.get()))
+    hms_label.config(text=hms)
 
 
 # Tuner window
@@ -312,6 +319,13 @@ def result_ready_handler(*args):
             folder_butt.config(bg='lightgreen')
             title_butt.config(bg='lightgreen')
             record_butt.config(bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
+            record_time = length(raw_file_path.get(), silent=silent.get())
+            if record_time is not None:
+                rec_time.set(record_time / 60.)
+            else:
+                rec_time.set(0.)
+            hms = "hms=" + str(timedelta(minutes=rec_time.get()))
+            hms_label.config(text=hms)
         else:
             overwriting.set(True)
             folder_butt.config(bg=bg_color)
@@ -373,7 +387,6 @@ def sync_short():
 if __name__ == '__main__':
     import os
     import tkinter as tk
-    from tkinter import ttk
     SYS = platform.system()
 
     # Configuration for entire folder selection read with filepaths
