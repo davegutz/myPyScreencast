@@ -74,7 +74,9 @@ class Global:
         self.sync_tuner_butt = tk.Button(owner)
         self.sync_short_tuner_butt = tk.Button(owner)
         self.video_delay_tuner_butt = tk.Button(owner)
+        self.hms_label = tk.Label(owner)
         self.intermediate_file = tk.Label(owner)
+        self.raw_file_path_label = tk.Label(owner)
         self.short_file_path_label = tk.Label(owner)
         self.start_short_butt = tk.Button(owner)
         self.stop_short_butt = tk.Button(owner)
@@ -219,8 +221,9 @@ def folder_path_handler(*args):
         rec_time.set(record_time / 60.)
     else:
         rec_time.set(0.)
-    hms = "hms=" + str(timedelta(minutes=rec_time.get()))
-    hms_label.config(text=hms)
+    hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+    hms_label.config(text=hms.get())
+    tuners.hms_label.config(text=hms.get())
 
 
 # Tuner window
@@ -243,9 +246,20 @@ def open_tuner_window():
     shortcut_label = tk.Label(shortcut_frame, text="Cut range, minutes:", bg=bg_color)
     tuners.start_short_butt = tk.Button(shortcut_frame, text=start_short.get(), command=enter_start_short_time, fg="green", bg=bg_color)
     tuners.stop_short_butt = tk.Button(shortcut_frame, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
+    tuners.hms_label = tk.Label(shortcut_frame, text="  within " + hms.get(), bg=bg_color)
     shortcut_label.pack(side="left", fill='x')
     tuners.start_short_butt.pack(side="left", fill='x')
     tuners.stop_short_butt.pack(side="left", fill='x')
+    tuners.hms_label.pack(side="left", fill='x')
+
+    # Raw unsync row
+    raw_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    raw_frame.pack(fill='x')
+    raw_file_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
+    raw_file_path_label_tuner = tk.Label(raw_frame, text=raw_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    raw_file_path_label_tuner.config(bg=bg_color)
+    raw_file_label.pack(side="left", fill='x')
+    raw_file_path_label_tuner.pack(side="right", fill='x')
 
     # Cut short
     cut_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
@@ -324,8 +338,9 @@ def result_ready_handler(*args):
                 rec_time.set(record_time / 60.)
             else:
                 rec_time.set(0.)
-            hms = "hms=" + str(timedelta(minutes=rec_time.get()))
-            hms_label.config(text=hms)
+            hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+            hms_label.config(text=hms.get())
+            tuners.hms_label.config(text=hms.get())
         else:
             overwriting.set(True)
             folder_butt.config(bg=bg_color)
@@ -495,6 +510,7 @@ if __name__ == '__main__':
     folder = tk.StringVar(root, cf[SYS]['folder'])
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(root, cf[SYS]['title'])
+    hms = tk.StringVar(root, '')
     out_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'.mkv'))
     short_out_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
@@ -560,8 +576,8 @@ if __name__ == '__main__':
     length_frame.pack(fill='x')
     rec_length = tk.Label(length_frame, text="Recording length, minutes:", bg=bg_color)
     time_butt = tk.Button(length_frame, text=rec_time.get(), command=enter_rec_time, fg="green", bg=bg_color)
-    hms = "hms=" + str(timedelta(minutes=rec_time.get()))
-    hms_label = tk.Label(length_frame, text=hms, wraplength=wrap_length, justify=tk.LEFT, bg=bg_color)
+    hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+    hms_label = tk.Label(length_frame, text=hms.get(), wraplength=wrap_length, justify=tk.LEFT, bg=bg_color)
     rec_length.pack(side="left", fill='x')
     time_butt.pack(side="left", fill='x')
     hms_label.pack(side="left", fill='x')
