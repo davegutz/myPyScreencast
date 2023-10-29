@@ -467,8 +467,8 @@ if __name__ == '__main__':
     destination_folder_button = None
     title_button = None
     if platform.system() == 'Darwin':
-        folder_button = tktt.TTButton(master, text=destination_folder.get(), command=enter_destination_folder,
-                                      fg="blue", bg=bg_color)
+        destination_folder_button = tktt.TTButton(master, text=destination_folder.get(), command=enter_destination_folder,
+                                                  fg="blue", bg=bg_color)
         title_button = tktt.TTButton(master, text=title.get(), command=enter_title,
                                      fg="blue", bg=bg_color)
     else:

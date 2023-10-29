@@ -3,3 +3,5 @@
 *.pyc
 *.ini
 GUI_screencast.ini
+.idea/myPyScreencast.iml
+.idea/misc.xml
