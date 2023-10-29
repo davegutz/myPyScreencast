@@ -72,6 +72,7 @@ class Begini(ConfigParser):
 class Global:
     def __init__(self, owner):
         self.sync_tuner_butt = tk.Button(owner)
+        self.sync_short_tuner_butt = tk.Button(owner)
         self.video_delay_tuner_butt = tk.Button(owner)
         self.intermediate_file = tk.Label(owner)
         self.short_file_path_label = tk.Label(owner)
@@ -137,7 +138,8 @@ def enter_folder(folder_='', init=False):
     cf[SYS]['folder'] = folder.get()
     cf.save_to_file()
     folder_butt.config(text=folder.get())
-    out_path.set(os.path.join(folder.get(), title.get()+'.mkv'))
+    out_path.set(os.path.join(folder.get(), title.get() + '.mkv'))
+    short_out_path.set(os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
 
 
 def enter_rec_time():
@@ -169,7 +171,8 @@ def enter_title(title_='', init=False):
     cf[SYS]['title'] = title.get()
     cf.save_to_file()
     title_butt.config(text=title.get())
-    out_path.set(os.path.join(folder.get(), title.get()+'.mkv'))
+    out_path.set(os.path.join(folder.get(), title.get() + '.mkv'))
+    short_out_path.set(os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
 
 
 def enter_video_delay():
@@ -215,22 +218,12 @@ def folder_path_handler(*args):
 
 # Tuner window
 def open_tuner_window():
-    tuner_window = tk.Toplevel(root)
+    tuner_window = tk.Toplevel(root, bg=bg_color)
     tuner_window.title("Tuner")
-    tuner_window.geometry("700x200")
-
-    # Instructions
-    tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
-    tuner_doc_frame.pack(side=tk.TOP)
-    tuner_doc = """Tune for video / audio sync.\n\
-    - Set range to be within the length of original video.\n\
-    - Press 'CUT IT OUT'.\n\
-    - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
-    tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
-    tuner_doc.pack(side="left", fill='x')
+    # tuner_window.geometry("700x200")
 
     # Video delay row
-    video_delay_tuner_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    video_delay_tuner_frame = tk.Frame(tuner_window, bg=box_color, bd=4, relief=relief)
     video_delay_tuner_frame.pack(side=tk.TOP)
     vd_label = tk.Label(video_delay_tuner_frame, text="Video delay +/-", bg=bg_color)
     tuners.video_delay_tuner_butt = tk.Button(video_delay_tuner_frame, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
@@ -250,13 +243,45 @@ def open_tuner_window():
     # Cut short
     cut_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     cut_short_frame.pack(side=tk.TOP)
-    tuners.short_cut_butt = tk.Button(cut_short_frame, text="***CUT IT OUT***", command=short_cut, bg='red', fg='white')
+    tuners.short_cut_butt = tk.Button(cut_short_frame, text="CUT IT OUT", command=short_cut, bg='lightyellow', fg='black')
     cut_short_label = tk.Label(cut_short_frame, text="Short file=", bg=bg_color)
     tuners.short_file_path_label = tk.Label(cut_short_frame, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.short_file_path_label.config(bg=bg_color)
     tuners.short_cut_butt.pack(side="left", fill='x')
     cut_short_label.pack(side="left", fill='x')
     tuners.short_file_path_label.pack(side="left", fill='x')
+
+    # Sync short
+    sync_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    sync_short_frame.pack(side=tk.TOP)
+    tuners.sync_short_tuner_butt = tk.Button(sync_short_frame, text="  SYNC SHORT  ", command=short_cut, bg='lightyellow', fg='black')
+    sync_short_label = tk.Label(sync_short_frame, text="sync short=", bg=bg_color)
+    tuners.short_out_file_path_label = tk.Label(sync_short_frame, text=short_out_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.short_out_file_path_label.config(bg=bg_color)
+    tuners.sync_short_tuner_butt.pack(side="left", fill='x')
+    sync_short_label.pack(side="left", fill='x')
+    tuners.short_out_file_path_label.pack(side="left", fill='x')
+
+    # Sync main
+    sync_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    sync_frame.pack(side=tk.TOP)
+    tuners.sync_tuner_butt = tk.Button(sync_frame, text="***  SYNC    ***", command=short_cut, bg='red', fg='white')
+    sync_label = tk.Label(sync_frame, text="sync =", bg=bg_color)
+    tuners.out_file_path_label = tk.Label(sync_frame, text=out_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.out_file_path_label.config(bg=bg_color)
+    tuners.sync_tuner_butt.pack(side="left", fill='x')
+    sync_label.pack(side="left", fill='x')
+    tuners.out_file_path_label.pack(side="left", fill='x')
+
+    # Instructions
+    tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
+    tuner_doc_frame.pack(side=tk.TOP)
+    tuner_doc = """Tune for video / audio sync.\n\
+    - Set range to be within the length of original video.\n\
+    - Press 'CUT IT OUT'.\n\
+    - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
+    tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
+    tuner_doc.pack(side="left", fill='x')
 
     short_file_path_handler()
     short_file_path.trace_add('write', short_file_path_handler)
@@ -328,6 +353,19 @@ def sync():
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file_path.get(),
                              output_file=os.path.join(os.getcwd(), out_path.get()))
         tuners.sync_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
+    else:
+        print("record first *******")
+
+
+def sync_short():
+    if result_ready.get():
+        if video_delay.get() >= 0.0:
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=short_file_path.get(),
+                             output_file=os.path.join(os.getcwd(), short_out_path.get()))
+        else:
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=short_file_path.get(),
+                             output_file=os.path.join(os.getcwd(), short_out_path.get()))
+        tuners.sync_short_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
         print("record first *******")
 
@@ -445,6 +483,7 @@ if __name__ == '__main__':
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(root, cf[SYS]['title'])
     out_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'.mkv'))
+    short_out_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
     video_grab = tk.StringVar(root, cf[SYS]['video_grab'])
