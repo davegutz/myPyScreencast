@@ -222,11 +222,23 @@ def enter_video_in():
 def open_tuner_window():
     tuner_window = tk.Toplevel(master)
     tuner_window.title("Tuner")
-    tuner_window.geometry("600x200")
+    tuner_window.geometry("700x200")
     trow = -1
 
-    # Video delay row
+    # Instructions
     trow += 1
+    doc = """Tune for video / audio sync.\n\
+    - Set range to be within the length of original video.\n\
+    - Press 'CUT IT OUT'.\n\
+    - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
+    tk.Label(tuner_window, text=doc, fg="black", justify='left').grid(row=trow, column=4, pady=2)
+    for i in range(3):
+        trow += i
+        t_blank = tk.Label(tuner_window, text='', wraplength=wrap_length, justify=tk.LEFT)
+        t_blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
+
+    # Video delay row
+    trow = 0
     tk.Label(tuner_window, text="Video delay +/-").grid(row=trow, column=0, pady=2, sticky=tk.E)
     tuners.video_delay_tuner_button = tk.Button(tuner_window, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
     tuners.video_delay_tuner_button.grid(row=trow, column=1, pady=2, sticky=tk.W)
@@ -240,8 +252,13 @@ def open_tuner_window():
     tuners.stop_short_button.grid(row=trow, column=2, pady=2, sticky=tk.W)
 
     # Cut short
+    trow = 8
+    for i in range(4):
+        trow += i
+        t_blank = tk.Label(tuner_window, text='', wraplength=wrap_length, justify=tk.LEFT)
+        t_blank.grid(sticky="W", row=row, column=1, padx=5, pady=5)
     trow += 1
-    tuners.short_cut_button = tk.Button(tuner_window, text="CUT IT OUT", command=short_cut)
+    tuners.short_cut_button = tk.Button(tuner_window, text="***CUT IT OUT***", command=short_cut, bg='red', fg='white')
     tuners.short_cut_button.grid(row=trow, column=0, padx=5, pady=5, sticky=tk.E)
     tk.Label(tuner_window, text="Short file=").grid(row=trow, column=3, pady=2, sticky=tk.E)
     tuners.short_file_path_label = tk.Label(tuner_window, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
@@ -285,10 +302,15 @@ def result_ready_handler(*args):
 
 
 def short_cut():
-    rs, fs = cut_short(silent=silent.get(), raw_file=raw_file_path.get(),
+    sf, rr = cut_short(silent=silent.get(), raw_file=raw_file_path.get(),
                        start_short=start_short.get()*60., stop_short=stop_short.get()*60.,
                        short_file=short_file_path.get())
-
+    if rr:
+        tuners.short_file_path_label.config(bg='lightgreen', fg='black')
+        tuners.short_cut_button.config(bg='yellow', fg='black')
+    else:
+        tuners.short_file_path_label.config(bg=bg_color, fg='black')
+        tuners.short_cut_button.config(bg='red', fg='black')
 
 def short_file_path_handler(*args):
     print(f"short_file_path_handler")
