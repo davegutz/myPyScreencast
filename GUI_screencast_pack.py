@@ -76,7 +76,7 @@ class Global:
         self.video_delay_tuner_butt = tk.Button(owner)
         self.hms_label = tk.Label(owner)
         self.intermediate_file = tk.Label(owner)
-        self.raw_file_path_label = tk.Label(owner)
+        self.raw_path_label = tk.Label(owner)
         self.short_file_path_label = tk.Label(owner)
         self.start_short_butt = tk.Button(owner)
         self.stop_short_butt = tk.Button(owner)
@@ -173,6 +173,7 @@ def enter_title(title_='', init=False):
     cf[SYS]['title'] = title.get()
     cf.save_to_file()
     title_butt.config(text=title.get())
+    raw_path.set(os.path.join(folder.get(), title.get() + '_unsync.mkv'))
     out_path.set(os.path.join(folder.get(), title.get() + '.mkv'))
     short_out_path.set(os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
 
@@ -216,12 +217,12 @@ def folder_path_handler(*args):
             folder_butt.config(bg='yellow')
             title_butt.config(bg='yellow')
     cf.save_to_file()
-    record_time = length(raw_file_path.get(), silent=silent.get())
+    record_time = length(raw_path.get(), silent=silent.get())
     if record_time is not None:
-        rec_time.set(record_time / 60.)
+        raw_time.set(record_time / 60.)
     else:
-        rec_time.set(0.)
-    hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+        raw_time.set(0.)
+    hms.set("hms=" + str(timedelta(minutes=raw_time.get())))
     hms_label.config(text=hms.get())
     tuners.hms_label.config(text=hms.get())
 
@@ -246,7 +247,7 @@ def open_tuner_window():
     shortcut_label = tk.Label(shortcut_frame, text="Cut range, minutes:", bg=bg_color)
     tuners.start_short_butt = tk.Button(shortcut_frame, text=start_short.get(), command=enter_start_short_time, fg="green", bg=bg_color)
     tuners.stop_short_butt = tk.Button(shortcut_frame, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
-    tuners.hms_label = tk.Label(shortcut_frame, text="  within " + hms.get(), bg=bg_color)
+    tuners.hms_label = tk.Label(shortcut_frame, text="  within " + "{:8.3f} minutes".format(raw_time.get()), bg=bg_color)
     shortcut_label.pack(side="left", fill='x')
     tuners.start_short_butt.pack(side="left", fill='x')
     tuners.stop_short_butt.pack(side="left", fill='x')
@@ -255,11 +256,11 @@ def open_tuner_window():
     # Raw unsync row
     raw_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_frame.pack(fill='x')
-    raw_file_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
-    raw_file_path_label_tuner = tk.Label(raw_frame, text=raw_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    raw_file_path_label_tuner.config(bg=bg_color)
-    raw_file_label.pack(side="left", fill='x')
-    raw_file_path_label_tuner.pack(side="right", fill='x')
+    raw_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
+    tuners.raw_path_label = tk.Label(raw_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.raw_path_label.config(bg=bg_color)
+    raw_label.pack(side="left", fill='x')
+    tuners.raw_path_label.pack(side="left", fill='x')
 
     # Cut short
     cut_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
@@ -306,6 +307,19 @@ def open_tuner_window():
 
     short_file_path_handler()
     short_file_path.trace_add('write', short_file_path_handler)
+    raw_path_handler()
+    # folder_path_handler()
+    # result_ready_handler()
+
+
+def raw_path_handler():
+    print(f"raw_path_handler: {raw_path.get()}")
+    if os.path.isfile(raw_path.get()) and os.path.getsize(raw_path.get()) > 0:  # bytes
+        print("coloring green")
+        tuners.raw_path_label.config(text=raw_path.get(), bg='lightgreen', fg='black')
+    else:
+        print("coloring plain")
+        tuners.raw_path_label.config(text=raw_path.get(), bg=bg_color, fg='black')
 
 
 def record():
@@ -317,8 +331,8 @@ def record():
                             audio_grabber=audio_grab.get(), audio_in=audio_in.get(),
                             crf=crf.get(),
                             rec_time=rec_time.get()*60.,
-                            output_file=raw_file_path.get())
-        raw_file_path.set(rf)  # screencast may cause null filename if fails
+                            output_file=raw_path.get())
+        raw_path.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
         sync()
     else:
@@ -333,12 +347,12 @@ def result_ready_handler(*args):
             folder_butt.config(bg='lightgreen')
             title_butt.config(bg='lightgreen')
             record_butt.config(bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
-            record_time = length(raw_file_path.get(), silent=silent.get())
+            record_time = length(raw_path.get(), silent=silent.get())
             if record_time is not None:
-                rec_time.set(record_time / 60.)
+                raw_time.set(record_time / 60.)
             else:
-                rec_time.set(0.)
-            hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+                raw_time.set(0.)
+            hms.set("hms=" + str(timedelta(minutes=raw_time.get())))
             hms_label.config(text=hms.get())
             tuners.hms_label.config(text=hms.get())
         else:
@@ -349,7 +363,7 @@ def result_ready_handler(*args):
 
 
 def short_cut():
-    sf, rr = cut_short(silent=silent.get(), raw_file=raw_file_path.get(),
+    sf, rr = cut_short(silent=silent.get(), raw_file=raw_path.get(),
                        start_short=start_short.get()*60., stop_short=stop_short.get()*60.,
                        short_file=short_file_path.get())
     if rr:
@@ -376,10 +390,10 @@ def silent_handler(*args):
 def sync():
     if result_ready.get():
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_file_path.get(),
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_path.get(),
                              output_file=os.path.join(os.getcwd(), out_path.get()))
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_file_path.get(),
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
                              output_file=os.path.join(os.getcwd(), out_path.get()))
         tuners.sync_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
@@ -510,6 +524,7 @@ if __name__ == '__main__':
     folder = tk.StringVar(root, cf[SYS]['folder'])
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     title = tk.StringVar(root, cf[SYS]['title'])
+    raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
     out_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'.mkv'))
     short_out_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
@@ -529,7 +544,7 @@ if __name__ == '__main__':
     else:
         overwriting = tk.BooleanVar(root, True)
     print(f"after load {overwriting.get()}")
-    raw_file_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_unsync.mkv'))
+    raw_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_unsync.mkv'))
     result_ready = tk.BooleanVar(root, os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()))
     start_short = tk.DoubleVar(root, 0.0)
     stop_short = tk.DoubleVar(root, 0.0)
@@ -576,7 +591,7 @@ if __name__ == '__main__':
     length_frame.pack(fill='x')
     rec_length = tk.Label(length_frame, text="Recording length, minutes:", bg=bg_color)
     time_butt = tk.Button(length_frame, text=rec_time.get(), command=enter_rec_time, fg="green", bg=bg_color)
-    hms.set("hms=" + str(timedelta(minutes=rec_time.get())))
+    hms.set("hms=" + str(timedelta(minutes=raw_time.get())))
     hms_label = tk.Label(length_frame, text=hms.get(), wraplength=wrap_length, justify=tk.LEFT, bg=bg_color)
     rec_length.pack(side="left", fill='x')
     time_butt.pack(side="left", fill='x')
@@ -627,9 +642,9 @@ if __name__ == '__main__':
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    raw_file_path_label = tk.Label(action_frame, text=raw_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    raw_file_path_label.config(bg=bg_color)
-    raw_file_path_label.pack(side="right", fill='x')
+    raw_path_label = tk.Label(action_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    raw_path_label.config(bg=bg_color)
+    raw_path_label.pack(side="right", fill='x')
     action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
     action_label.pack(side="right", fill='x')
 
@@ -642,6 +657,9 @@ if __name__ == '__main__':
     tuner_window_butt.pack(side="right", fill='x')
 
     # Begin
+    print("call raw_path_handler")
+    raw_path_handler()
+    raw_path.trace_add('write', raw_path_handler)
     folder_path_handler()
     out_path.trace_add('write', folder_path_handler)
     silent_handler()
