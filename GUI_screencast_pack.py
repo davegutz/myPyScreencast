@@ -44,15 +44,15 @@ class Begini(ConfigParser):
 
         (config_path, config_basename) = os.path.split(name)
         config_txt = os.path.splitext(config_basename)[0] + '.ini'
-        self.config_file_path = os.path.join(config_path, config_txt)
-        print('config file', self.config_file_path)
-        if os.path.isfile(self.config_file_path):
-            self.read(self.config_file_path)
+        self.config_path = os.path.join(config_path, config_txt)
+        print('config file', self.config_path)
+        if os.path.isfile(self.config_path):
+            self.read(self.config_path)
         else:
-            with open(self.config_file_path, 'w') as cfg_file:
+            with open(self.config_path, 'w') as cfg_file:
                 self.read_dict(def_dict_)
                 self.write(cfg_file)
-            print('wrote', self.config_file_path)
+            print('wrote', self.config_path)
 
     # Get an item
     def get_item(self, ind, item):
@@ -65,9 +65,9 @@ class Begini(ConfigParser):
 
     # Save again
     def save_to_file(self):
-        with open(self.config_file_path, 'w') as cfg_file:
+        with open(self.config_path, 'w') as cfg_file:
             self.write(cfg_file)
-        print('wrote', self.config_file_path)
+        print('wrote', self.config_path)
 
 
 # Executive class to control the global variables
@@ -79,7 +79,7 @@ class Global:
         self.hms_label = tk.Label(owner)
         self.intermediate_file = tk.Label(owner)
         self.raw_path_label = tk.Label(owner)
-        self.short_file_path_label = tk.Label(owner)
+        self.short_path_label = tk.Label(owner)
         self.start_short_butt = myButton(owner)
         self.stop_short_butt = myButton(owner)
         self.short_cut_butt = myButton(owner)
@@ -268,9 +268,9 @@ def handle_result_ready(*args):
 def handle_short_path(*args):
     print(f"handle_short_path {short_path.get()=}")
     if os.path.isfile(short_path.get()) and os.path.getsize(short_path.get()) > 0:  # bytes
-        tuners.short_file_path_label.config(bg=bg_color)
+        tuners.short_path_label.config(bg=bg_color)
     else:
-        tuners.short_file_path_label.config(bg='yellow')
+        tuners.short_path_label.config(bg='yellow')
 
 
 def handle_silent(*args):
@@ -318,11 +318,11 @@ def open_tuner_window():
     cut_short_frame.pack(side=tk.TOP)
     tuners.short_cut_butt = myButton(cut_short_frame, text="CUT IT OUT", command=short_cut, bg='lightyellow', fg='black')
     cut_short_label = tk.Label(cut_short_frame, text="Short file=", bg=bg_color)
-    tuners.short_file_path_label = tk.Label(cut_short_frame, text=short_file_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.short_file_path_label.config(bg=bg_color)
+    tuners.short_path_label = tk.Label(cut_short_frame, text=short_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.short_path_label.config(bg=bg_color)
     tuners.short_cut_butt.pack(side="left", fill='x')
     cut_short_label.pack(side="left", fill='x')
-    tuners.short_file_path_label.pack(side="left", fill='x')
+    tuners.short_path_label.pack(side="left", fill='x')
 
     # Sync short
     sync_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
@@ -357,7 +357,7 @@ def open_tuner_window():
     tuner_doc.pack(side="left", fill='x')
 
     handle_short_path()
-    short_file_path.trace_add('write', handle_short_path)
+    short_path.trace_add('write', handle_short_path)
     handle_raw_path()
     # handle_folder_path()
     # handle_result_ready()
@@ -383,12 +383,12 @@ def record():
 def short_cut():
     sf, rr = cut_short(silent=silent.get(), raw_file=raw_path.get(),
                        start_short=start_short.get()*60., stop_short=stop_short.get()*60.,
-                       short_file=short_file_path.get())
+                       short_file=short_path.get())
     if rr:
-        tuners.short_file_path_label.config(bg='lightgreen', fg='black')
+        tuners.short_path_label.config(bg='lightgreen', fg='black')
         tuners.short_cut_butt.config(bg='yellow', fg='black')
     else:
-        tuners.short_file_path_label.config(bg=bg_color, fg='black')
+        tuners.short_path_label.config(bg=bg_color, fg='black')
         tuners.short_cut_butt.config(bg='red', fg='black')
 
 
@@ -408,10 +408,10 @@ def sync():
 def sync_short():
     if result_ready.get():
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=short_file_path.get(),
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=short_path.get(),
                              output_file=os.path.join(os.getcwd(), short_path.get()))
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=short_file_path.get(),
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=short_path.get(),
                              output_file=os.path.join(os.getcwd(), short_path.get()))
         tuners.sync_short_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
@@ -554,7 +554,7 @@ if __name__ == '__main__':
     result_ready = tk.BooleanVar(root, os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()))
     start_short = tk.DoubleVar(root, 0.0)
     stop_short = tk.DoubleVar(root, 0.0)
-    short_file_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_short.mkv'))
+    short_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_short.mkv'))
     row = -1
 
     # Root
