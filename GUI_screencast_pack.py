@@ -143,7 +143,8 @@ def enter_folder(folder_='', init=False):
     cf.save_to_file()
     folder_butt.config(text=folder.get())
     out_path.set(os.path.join(folder.get(), title.get() + '.mkv'))
-    short_out_path.set(os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
+    short_file.set('short_' + title.get() + '.mkv')
+    short_path.set(os.path.join(folder.get(), short_file.get()))
 
 
 def enter_rec_time():
@@ -177,7 +178,8 @@ def enter_title(title_='', init=False):
     title_butt.config(text=title.get())
     raw_path.set(os.path.join(folder.get(), title.get() + '_unsync.mkv'))
     out_path.set(os.path.join(folder.get(), title.get() + '.mkv'))
-    short_out_path.set(os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
+    short_file.set('short_' + title.get() + '.mkv')
+    short_path.set(os.path.join(folder.get(), short_file.get()))
 
 
 def enter_video_delay():
@@ -264,8 +266,8 @@ def handle_result_ready(*args):
 
 # Tuner window
 def handle_short_path(*args):
-    print(f"handle_short_path {short_out_path.get()=}")
-    if os.path.isfile(short_out_path.get()) and os.path.getsize(short_out_path.get()) > 0:  # bytes
+    print(f"handle_short_path {short_path.get()=}")
+    if os.path.isfile(short_path.get()) and os.path.getsize(short_path.get()) > 0:  # bytes
         tuners.short_file_path_label.config(bg=bg_color)
     else:
         tuners.short_file_path_label.config(bg='yellow')
@@ -327,22 +329,22 @@ def open_tuner_window():
     sync_short_frame.pack(side=tk.TOP)
     tuners.sync_short_tuner_butt = myButton(sync_short_frame, text="  SYNC SHORT  ", command=short_cut, bg='lightyellow', fg='black')
     sync_short_label = tk.Label(sync_short_frame, text="sync short=", bg=bg_color)
-    tuners.short_out_file_path_label = tk.Label(sync_short_frame, text=short_out_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.short_out_file_path_label.config(bg=bg_color)
+    tuners.short_path_label = tk.Label(sync_short_frame, text=short_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.short_path_label.config(bg=bg_color)
     tuners.sync_short_tuner_butt.pack(side="left", fill='x')
     sync_short_label.pack(side="left", fill='x')
-    tuners.short_out_file_path_label.pack(side="left", fill='x')
+    tuners.short_path_label.pack(side="left", fill='x')
 
     # Sync main
     sync_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_frame.pack(side=tk.TOP)
     tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=short_cut, bg='red', fg='white')
     sync_label = tk.Label(sync_frame, text="sync =", bg=bg_color)
-    tuners.out_file_path_label = tk.Label(sync_frame, text=out_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.out_file_path_label.config(bg=bg_color)
+    tuners.out_path_label = tk.Label(sync_frame, text=out_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.out_path_label.config(bg=bg_color)
     tuners.sync_tuner_butt.pack(side="left", fill='x')
     sync_label.pack(side="left", fill='x')
-    tuners.out_file_path_label.pack(side="left", fill='x')
+    tuners.out_path_label.pack(side="left", fill='x')
 
     # Instructions
     tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
@@ -407,10 +409,10 @@ def sync_short():
     if result_ready.get():
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=short_file_path.get(),
-                             output_file=os.path.join(os.getcwd(), short_out_path.get()))
+                             output_file=os.path.join(os.getcwd(), short_path.get()))
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=short_file_path.get(),
-                             output_file=os.path.join(os.getcwd(), short_out_path.get()))
+                             output_file=os.path.join(os.getcwd(), short_path.get()))
         tuners.sync_short_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
         print("record first *******")
@@ -530,7 +532,8 @@ if __name__ == '__main__':
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
     out_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'.mkv'))
-    short_out_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
+    short_file = tk.StringVar(root, 'short_' + title.get() + '.mkv')
+    short_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
     video_grab = tk.StringVar(root, cf[SYS]['video_grab'])
