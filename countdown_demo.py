@@ -1,26 +1,37 @@
 import tkinter as tk
 
 
-def job():
-    status.config(text="starting job")
+def record():
+    b.config(text="starting job")
 
 
-def countdown(time, msg='Counting down'):
-    time -= 1
-    status.config(text=f'{msg} ({time}sec)')
-
-    if time != 0:
-        root.after(1000, countdown, time)
-
+def start():
+    b.config(text="counting down")
+    msg = 'Counting down'
+    print(f"countdown {time.get()=}")
+    time.set(time.get() - 1)
+    # counter.withdraw()
+    # counter.deiconify()
+    status.config(text=f'{msg} ({time.get()}sec)')
+    if time.get() != 0:
+        root.after(1000, start)
     else:
-        job()  # if job is blocking then create a thread
+        counter.withdraw()
+        record()  # if job is blocking then create a thread
 
 
 root = tk.Tk()
+counter = tk.Tk()
+counter.attributes('-topmost', True)
+time = tk.IntVar(root, 5)
 
-status = tk.Label(root)
+a = tk.Button(root, text="Click This", command=start)
+a.pack()
+b = tk.Label(root, text="Gross steps show here")
+b.pack()
+
+status = tk.Label(counter)
 status.pack()
 
-countdown(5)
-
 root.mainloop()
+counter.mainloop()
