@@ -22,14 +22,13 @@
 from configparser import ConfigParser
 import platform
 if platform.system() == 'Darwin':
-    import ttwidgets as tktt
     from ttwidgets import TTButton as myButton
 else:
     import tkinter as tk
     from tkinter import Button as myButton
 from tkinter import filedialog
 import tkinter.simpledialog
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_short, length
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
 import tkinter.messagebox
 import pyperclip
 from datetime import timedelta
@@ -74,15 +73,15 @@ class Begini(ConfigParser):
 class Global:
     def __init__(self, owner):
         self.sync_tuner_butt = myButton(owner)
-        self.sync_short_tuner_butt = myButton(owner)
+        self.sync_clip_tuner_butt = myButton(owner)
         self.video_delay_tuner_butt = myButton(owner)
         self.hms_label = tk.Label(owner)
         self.intermediate_file = tk.Label(owner)
         self.raw_path_label = tk.Label(owner)
-        self.short_path_label = tk.Label(owner)
-        self.start_short_butt = myButton(owner)
-        self.stop_short_butt = myButton(owner)
-        self.short_cut_butt = myButton(owner)
+        self.clip_path_label = tk.Label(owner)
+        self.start_clip_butt = myButton(owner)
+        self.stop_clip_butt = myButton(owner)
+        self.clip_cut_butt = myButton(owner)
 
 
 # Global methods
@@ -144,8 +143,8 @@ def enter_folder(folder_='', init=False):
     folder_butt.config(text=folder.get())
     out_file.set(title.get()+'.mkv')
     out_path.set(os.path.join(folder.get(), out_file.get()))
-    short_file.set('short_' + title.get() + '.mkv')
-    short_path.set(os.path.join(folder.get(), short_file.get()))
+    clip_file.set('clip_' + title.get() + '.mkv')
+    clip_path.set(os.path.join(folder.get(), clip_file.get()))
 
 
 def enter_rec_time():
@@ -155,14 +154,14 @@ def enter_rec_time():
     time_butt.config(text=rec_time.get())
 
 
-def enter_start_short_time():
-    start_short.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes", initialvalue=start_short.get()))
-    tuners.start_short_butt.config(text=start_short.get())
+def enter_start_clip_time():
+    start_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes", initialvalue=start_clip.get()))
+    tuners.start_clip_butt.config(text=start_clip.get())
 
 
-def enter_stop_short_time():
-    stop_short.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes", initialvalue=stop_short.get()))
-    tuners.stop_short_butt.config(text=stop_short.get())
+def enter_stop_clip_time():
+    stop_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes", initialvalue=stop_clip.get()))
+    tuners.stop_clip_butt.config(text=stop_clip.get())
 
 
 def enter_title(title_='', init=False):
@@ -180,8 +179,8 @@ def enter_title(title_='', init=False):
     raw_path.set(os.path.join(folder.get(), title.get() + '_unsync.mkv'))
     out_file.set(title.get()+'.mkv')
     out_path.set(os.path.join(folder.get(), out_file.get()))
-    short_file.set('short_' + title.get() + '.mkv')
-    short_path.set(os.path.join(folder.get(), short_file.get()))
+    clip_file.set('clip_' + title.get() + '.mkv')
+    clip_path.set(os.path.join(folder.get(), clip_file.get()))
 
 
 def enter_video_delay():
@@ -267,12 +266,12 @@ def handle_result_ready(*args):
 
 
 # Tuner window
-def handle_short_path(*args):
-    print(f"handle_short_path {short_path.get()=}")
-    if os.path.isfile(short_path.get()) and os.path.getsize(short_path.get()) > 0:  # bytes
-        tuners.short_path_label.config(bg=bg_color)
+def handle_clip_path(*args):
+    print(f"handle_clip_path {clip_path.get()=}")
+    if os.path.isfile(clip_path.get()) and os.path.getsize(clip_path.get()) > 0:  # bytes
+        tuners.clip_path_label.config(bg=bg_color)
     else:
-        tuners.short_path_label.config(bg='yellow')
+        tuners.clip_path_label.config(bg='yellow')
 
 
 def handle_silent(*args):
@@ -294,16 +293,16 @@ def open_tuner_window():
     vd_label.pack(side="left", fill='x')
     tuners.video_delay_tuner_butt.pack(side="left", fill='x')
 
-    # Shortcut row
-    shortcut_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
-    shortcut_frame.pack(side=tk.TOP)
-    shortcut_label = tk.Label(shortcut_frame, text="Cut range, minutes:", bg=bg_color)
-    tuners.start_short_butt = myButton(shortcut_frame, text=start_short.get(), command=enter_start_short_time, fg="green", bg=bg_color)
-    tuners.stop_short_butt = myButton(shortcut_frame, text=stop_short.get(), command=enter_stop_short_time, fg="green", bg=bg_color)
-    tuners.hms_label = tk.Label(shortcut_frame, text="  within " + "{:8.3f} minutes".format(raw_time.get()), bg=bg_color)
-    shortcut_label.pack(side="left", fill='x')
-    tuners.start_short_butt.pack(side="left", fill='x')
-    tuners.stop_short_butt.pack(side="left", fill='x')
+    # Clipcut row
+    clipcut_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    clipcut_frame.pack(side=tk.TOP)
+    clipcut_label = tk.Label(clipcut_frame, text="Clip range, minutes:", bg=bg_color)
+    tuners.start_clip_butt = myButton(clipcut_frame, text=start_clip.get(), command=enter_start_clip_time, fg="green", bg=bg_color)
+    tuners.stop_clip_butt = myButton(clipcut_frame, text=stop_clip.get(), command=enter_stop_clip_time, fg="green", bg=bg_color)
+    tuners.hms_label = tk.Label(clipcut_frame, text="  within " + "{:8.3f} minutes".format(raw_time.get()), bg=bg_color)
+    clipcut_label.pack(side="left", fill='x')
+    tuners.start_clip_butt.pack(side="left", fill='x')
+    tuners.stop_clip_butt.pack(side="left", fill='x')
     tuners.hms_label.pack(side="left", fill='x')
 
     # Raw unsync row
@@ -315,32 +314,32 @@ def open_tuner_window():
     raw_label.pack(side="left", fill='x')
     tuners.raw_path_label.pack(side="left", fill='x')
 
-    # Cut short
-    cut_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
-    cut_short_frame.pack(side=tk.TOP)
-    tuners.short_cut_butt = myButton(cut_short_frame, text="CUT IT OUT", command=short_cut, bg='lightyellow', fg='black')
-    cut_short_label = tk.Label(cut_short_frame, text="Short file=", bg=bg_color)
-    tuners.short_path_label = tk.Label(cut_short_frame, text=short_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.short_path_label.config(bg=bg_color)
-    tuners.short_cut_butt.pack(side="left", fill='x')
-    cut_short_label.pack(side="left", fill='x')
-    tuners.short_path_label.pack(side="left", fill='x')
+    # Cut clip
+    cut_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    cut_clip_frame.pack(side=tk.TOP)
+    tuners.clip_cut_butt = myButton(cut_clip_frame, text=" CLIP IT ", command=clip_cut, bg='lightyellow', fg='black')
+    cut_clip_label = tk.Label(cut_clip_frame, text="Clip file=", bg=bg_color)
+    tuners.clip_path_label = tk.Label(cut_clip_frame, text=clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.clip_path_label.config(bg=bg_color)
+    tuners.clip_cut_butt.pack(side="left", fill='x')
+    cut_clip_label.pack(side="left", fill='x')
+    tuners.clip_path_label.pack(side="left", fill='x')
 
-    # Sync short
-    sync_short_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
-    sync_short_frame.pack(side=tk.TOP)
-    tuners.sync_short_tuner_butt = myButton(sync_short_frame, text="  SYNC SHORT  ", command=short_cut, bg='lightyellow', fg='black')
-    sync_short_label = tk.Label(sync_short_frame, text="Sync short=", bg=bg_color)
-    tuners.short_path_label = tk.Label(sync_short_frame, text=short_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.short_path_label.config(bg=bg_color)
-    tuners.sync_short_tuner_butt.pack(side="left", fill='x')
-    sync_short_label.pack(side="left", fill='x')
-    tuners.short_path_label.pack(side="left", fill='x')
+    # Sync clip
+    sync_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    sync_clip_frame.pack(side=tk.TOP)
+    tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=clip_cut, bg='lightyellow', fg='black')
+    sync_clip_label = tk.Label(sync_clip_frame, text="Sync clip=", bg=bg_color)
+    tuners.clip_path_label = tk.Label(sync_clip_frame, text=clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.clip_path_label.config(bg=bg_color)
+    tuners.sync_clip_tuner_butt.pack(side="left", fill='x')
+    sync_clip_label.pack(side="left", fill='x')
+    tuners.clip_path_label.pack(side="left", fill='x')
 
     # Sync main
     sync_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_frame.pack(side=tk.TOP)
-    tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=short_cut, bg='red', fg='white')
+    tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=clip_cut, bg='red', fg='white')
     sync_label = tk.Label(sync_frame, text="Sync =", bg=bg_color)
     tuners.out_path_label = tk.Label(sync_frame, text=out_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.out_path_label.config(bg=bg_color)
@@ -353,13 +352,13 @@ def open_tuner_window():
     tuner_doc_frame.pack(side=tk.TOP)
     tuner_doc = """Tune for video / audio sync.\n\
     - Set range to be within the length of original video.\n\
-    - Press 'CUT IT OUT'.\n\
+    - Press 'CLIP IT'.\n\
     - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
     tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
     tuner_doc.pack(side="left", fill='x')
 
-    handle_short_path()
-    short_path.trace_add('write', handle_short_path)
+    handle_clip_path()
+    clip_path.trace_add('write', handle_clip_path)
     handle_raw_path()
     # handle_folder_path()
     # handle_result_ready()
@@ -382,16 +381,16 @@ def record():
         print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-def short_cut():
-    sf, rr = cut_short(silent=silent.get(), raw_file=raw_path.get(),
-                       start_short=start_short.get()*60., stop_short=stop_short.get()*60.,
-                       short_file=short_path.get())
+def clip_cut():
+    sf, rr = cut_clip(silent=silent.get(), raw_file=raw_path.get(),
+                      start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
+                      clip_file=clip_path.get())
     if rr:
-        tuners.short_path_label.config(bg='lightgreen', fg='black')
-        tuners.short_cut_butt.config(bg='yellow', fg='black')
+        tuners.clip_path_label.config(bg='lightgreen', fg='black')
+        tuners.clip_cut_butt.config(bg='yellow', fg='black')
     else:
-        tuners.short_path_label.config(bg=bg_color, fg='black')
-        tuners.short_cut_butt.config(bg='red', fg='black')
+        tuners.clip_path_label.config(bg=bg_color, fg='black')
+        tuners.clip_cut_butt.config(bg='red', fg='black')
 
 
 def sync():
@@ -407,15 +406,15 @@ def sync():
         print("record first *******")
 
 
-def sync_short():
+def sync_clip():
     if result_ready.get():
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=short_path.get(),
-                             output_file=os.path.join(os.getcwd(), short_path.get()))
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=clip_path.get(),
+                             output_file=os.path.join(os.getcwd(), clip_path.get()))
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=short_path.get(),
-                             output_file=os.path.join(os.getcwd(), short_path.get()))
-        tuners.sync_short_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=clip_path.get(),
+                             output_file=os.path.join(os.getcwd(), clip_path.get()))
+        tuners.sync_clip_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
         print("record first *******")
 
@@ -535,8 +534,8 @@ if __name__ == '__main__':
     hms = tk.StringVar(root, '')
     out_file = tk.StringVar(root, title.get()+'.mkv')
     out_path = tk.StringVar(root, os.path.join(folder.get(), out_file.get()))
-    short_file = tk.StringVar(root, 'short_' + title.get() + '.mkv')
-    short_path = tk.StringVar(root, os.path.join(folder.get(), 'short_' + title.get() + '.mkv'))
+    clip_file = tk.StringVar(root, 'clip_' + title.get() + '.mkv')
+    clip_path = tk.StringVar(root, os.path.join(folder.get(), 'clip_' + title.get() + '.mkv'))
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
     video_grab = tk.StringVar(root, cf[SYS]['video_grab'])
@@ -555,9 +554,9 @@ if __name__ == '__main__':
     print(f"after load {overwriting.get()}")
     raw_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_unsync.mkv'))
     result_ready = tk.BooleanVar(root, os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()))
-    start_short = tk.DoubleVar(root, 0.0)
-    stop_short = tk.DoubleVar(root, 0.0)
-    short_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_short.mkv'))
+    start_clip = tk.DoubleVar(root, 0.0)
+    stop_clip = tk.DoubleVar(root, 0.0)
+    clip_path = tk.StringVar(root, os.path.join(folder.get(), title.get()+'_clip.mkv'))
     row = -1
 
     # Root

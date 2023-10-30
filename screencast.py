@@ -21,26 +21,26 @@
 import time
 import timeit
 import platform
-import tkinter as tk
+# import tkinter as tk
 from screencast_util import *
 # from tkinter import filedialog, messagebox
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
 # Cut segment out and save to file
-def cut_short(waiting=False, silent=True, conversation=False,
-              raw_file=None, start_short=0., stop_short=0.,
-              short_file=None):
+def cut_clip(waiting=False, silent=True, conversation=False,
+             raw_file=None, start_clip=0., stop_clip=0.,
+             clip_file=None):
 
-    print(f"{waiting=} {silent=} {conversation=} {raw_file=} {start_short=} {stop_short=} {short_file=}")
+    print(f"{waiting=} {silent=} {conversation=} {raw_file=} {start_clip=} {stop_clip=} {clip_file=}")
 
     # Initialization
     result_ready = False
 
-    command =  ("ffmpeg -i {:s}".format(raw_file) +
-                " -ss {:5.2f}".format(start_short) +
-                " -to {:5.2f}".format(stop_short) +
-                " -acodec copy -y {:s}".format(short_file))
+    command = ("ffmpeg -i {:s}".format(raw_file) +
+               " -ss {:5.2f}".format(start_clip) +
+               " -to {:5.2f}".format(stop_clip) +
+               " -acodec copy -y {:s}".format(clip_file))
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -55,7 +55,7 @@ def cut_short(waiting=False, silent=True, conversation=False,
         print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
               Colors.reset, end='')
         result_ready = True
-        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, short_file, Colors.reset)
+        print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, clip_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
         if result == -1:
@@ -63,7 +63,7 @@ def cut_short(waiting=False, silent=True, conversation=False,
         result_ready = True
 
     print('')
-    display_result(short_file, platform.system(), silent, conversation=conversation)
+    display_result(clip_file, platform.system(), silent, conversation=conversation)
 
     # Delay a little to allow windows to pop up without hiding each other.
     # The slower the computer, the more needed.
@@ -76,15 +76,12 @@ def cut_short(waiting=False, silent=True, conversation=False,
         else:
             messagebox.showinfo(title='screencast', message='files ready')
 
-    return short_file, result_ready
+    return clip_file, result_ready
 
 
 # Delay audio to sync with video
 def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
     print(f"{delay=} {input_file=} {output_file=} {silent=}")
-
-    # Initialization
-    result_ready = False
 
     # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
 
@@ -106,21 +103,16 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
             return None, False
         print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
               Colors.reset, end='')
-        result_ready = True
         print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
-        if result == -1:
-            return result_ready, False
-        result_ready = True
+
+    return result, False
 
 
 # Delay video to sync with audio
 def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
     print(f"{delay=} {input_file=} {output_file=} {silent=}")
-
-    # Initialization
-    result_ready = False
 
     # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
 
@@ -142,17 +134,14 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
             return None, False
         print(Colors.fg.orange, 'Processed delay for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
               Colors.reset, end='')
-        result_ready = True
         print(Colors.fg.orange, "  The synchronized result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
-        if result == -1:
-            return result_ready, False
-        result_ready = True
+    return result
 
 
 # Length of a video file
-def length(input_file = None, silent=True, save_stdout=True):
+def length(input_file=None, silent=True, save_stdout=True):
 
     # String together the ffmpeg command
     command = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {:s}".format(input_file)
