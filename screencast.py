@@ -37,10 +37,10 @@ def cut_clip(waiting=False, silent=True, conversation=False,
     # Initialization
     result_ready = False
 
-    command = ("ffmpeg -i {:s}".format(raw_file) +
+    command = ('ffmpeg -i "{:s}"'.format(raw_file) +
                " -ss {:5.2f}".format(start_clip) +
                " -to {:5.2f}".format(stop_clip) +
-               " -acodec copy -y {:s}".format(clip_file))
+               ' -acodec copy -y "{:s}"'.format(clip_file))
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -85,11 +85,11 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
     # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
 
-    command = ("ffmpeg -i {:s}".format(input_file) +
+    command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
-               " -i {:s}".format(input_file) +
+               ' -i "{:s}"'.format(input_file) +
                ' -c:v copy -map 0:v:0 -map 1:a:0 ' +
-               " -y {:s}".format(output_file))
+               ' -y "{:s}"'.format(output_file))
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -116,11 +116,11 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
     # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
 
-    command = ("ffmpeg -i {:s}".format(input_file) +
+    command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
-               " -i {:s}".format(input_file) +
+               ' -i "{:s}"'.format(input_file) +
                ' -c:v copy -map 0:a:0 -map 1:v:0 ' +
-               " -y {:s}".format(output_file))
+               ' -y "{:s}"'.format(output_file))
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -144,7 +144,7 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 def length(input_file=None, silent=True, save_stdout=True):
 
     # String together the ffmpeg command
-    command = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {:s}".format(input_file)
+    command = 'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{:s}"'.format(input_file)
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -196,7 +196,8 @@ def screencast(waiting=False, silent=True, conversation=False,
                    " -i {:s}:{:s}".format(video_in, audio_in) +
                    " -vf crop=1382:814:57:82" +  # full prime opera
                    " -vcodec libx264 -crf {:d}".format(crf) +
-                   " -t {:5.1f} -y ".format(rec_time) + output_file)
+                   " -t {:5.1f} -y ".format(rec_time) +
+                   ' "{:s}"'.format(output_file))
     else:
         command = ("ffmpeg -threads 4" +
                    " -f {:s}".format(video_grabber) +
@@ -204,10 +205,11 @@ def screencast(waiting=False, silent=True, conversation=False,
                    " -thread_queue_size 1024" +
                    " -i {:s}".format(video_in) +
                    " -f {:s}".format(audio_grabber) +
-                   " -i {:s}".format(audio_in) +
                    " -thread_queue_size 1024" +
+                   " -i {:s}".format(audio_in) +
                    " -vcodec libx264 -crf {:d}".format(crf) +
-                   " -t {:5.1f} -y ".format(rec_time) + output_file)
+                   " -t {:5.1f} -y ".format(rec_time) +
+                   ' "{:s}"'.format(output_file))
 
     start_time = timeit.default_timer()
     if silent is False:
