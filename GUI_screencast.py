@@ -18,7 +18,6 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-"""Define a class to manage configuration using files for memory (poor man's database)"""
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
 from configparser import ConfigParser
 from datetime import timedelta
@@ -37,9 +36,9 @@ else:
     from tkinter import Button as myButton
 from tkinter import filedialog
 
-# Begini - configuration class using .ini files
-class Begini(ConfigParser):
 
+class Begini(ConfigParser):
+    """Begini - configuration class using .ini files"""
     def __init__(self, name, def_dict_):
         ConfigParser.__init__(self)
 
@@ -71,8 +70,9 @@ class Begini(ConfigParser):
         print('wrote', self.config_path)
 
 
-# Executive class to control the global variables
 class Global:
+    """Executive class to control the global variables"""
+
     def __init__(self, owner):
         self.sync_tuner_butt = myButton(owner)
         self.sync_clip_tuner_butt = myButton(owner)
@@ -111,8 +111,8 @@ def clip_cut():
         tuners.clip_cut_butt.config(bg='red', fg='black')
 
 
-# Split all information contained in file path
 def contain_all(testpath):
+    """Split all information contained in file path"""
     folder_path, basename = os.path.split(testpath)
     parent, txt = os.path.split(folder_path)
     # get key
@@ -199,11 +199,6 @@ def enter_title(title_='', init=False):
     cf[SYS]['title'] = title.get()
     cf.save_to_file()
     title_butt.config(text=title.get())
-    # raw_path.set(os.path.join(folder.get(), title.get() + '_unsync.mkv'))
-    # out_file.set(title.get()+'.mkv')
-    # out_path.set(os.path.join(folder.get(), out_file.get()))
-    # clip_file.set('clip_' + title.get() + '.mkv')
-    # clip_path.set(os.path.join(folder.get(), clip_file.get()))
     set_file_paths()
 
 
@@ -289,8 +284,8 @@ def handle_result_ready(*args):
             record_butt.config(bg='red', activebackground='red', fg='white', activeforeground='purple')
 
 
-# Tuner window
 def handle_clip_path(*args):
+    """Tuner window"""
     print(f"handle_clip_path {clip_path.get()=}")
     if os.path.isfile(clip_path.get()) and os.path.getsize(clip_path.get()) > 0:  # bytes
         tuners.raw_clip_path_label.config(bg=bg_color)
@@ -416,7 +411,6 @@ def record():
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-# send a message of completion
 def Send_Email(email=my_email, password=my_app_password, to=my_email, subject='undefined', message='undefined'):
     """Sends email to the respected receiver."""
     try:
@@ -435,8 +429,8 @@ def Send_Email(email=my_email, password=my_app_password, to=my_email, subject='u
         print("Email failed:", e)
 
 
-# Use 'title' and 'folder' to set paths of all files used
 def set_file_paths():
+    """Use 'title' and 'folder' to set paths of all files used"""
     out_file.set(title.get()+'.mkv')
     out_path.set(os.path.join(folder.get(), out_file.get()))
     raw_file.set(title.get() + '_raw.mkv')
@@ -445,6 +439,20 @@ def set_file_paths():
     raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
     clip_file.set(title.get() + '_clip.mkv')
     clip_path.set(os.path.join(folder.get(), clip_file.get()))
+
+
+def start():
+    """After 'pushing the button' display countdown to give time to set up full screen etc"""
+    count_down_label.config(text="counting down")
+    msg = 'Counting down'
+    print(f"countdown {time.get()=}")
+    time.set(time.get() - 1)
+    counter_status.config(text=f'{msg} ({time.get()}sec)')
+    if time.get() != 0:
+        root.after(1000, start)
+    else:
+        counter.withdraw()
+        record()  # if job is blocking then create start_button thread
 
 
 def sync():
@@ -578,6 +586,9 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title('Screencast')
     root.wm_minsize(width=min_width, height=main_height)
+    counter = tk.Tk()
+    counter.attributes('-topmost', True)
+    time = tk.IntVar(root, 5)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
@@ -711,10 +722,14 @@ if __name__ == '__main__':
     # Record row
     record_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     record_frame.pack(fill='x')
-    record_butt = myButton(record_frame, text='****    RECORD     ****', command=record, fg='white', bg='red', wraplength=wrap_length, justify=tk.CENTER)
+    record_butt = myButton(record_frame, text='****    RECORD     ****', command=start, fg='white', bg='red', wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     record_butt.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
+    count_down_label = tk.Label(root, text="RECORD progress shown here")
+    count_down_label.pack()
+    counter_status = tk.Label(counter)
+    counter_status.pack()
 
     # Begin
     print("call handle_raw_path")
