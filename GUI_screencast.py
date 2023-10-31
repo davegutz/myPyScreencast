@@ -411,8 +411,7 @@ def record():
                 'message': message}  # The message you want
             )
             thread.start()
-            tk.Message(root, text="done")
-            # tk.messagebox.showinfo(title='Screencast', message='files ready')
+            tk.messagebox.showinfo(title='Screencast', message='files ready')
         else:
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
