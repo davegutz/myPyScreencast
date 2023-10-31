@@ -21,20 +21,22 @@
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
 from configparser import ConfigParser
 from datetime import timedelta
+from tkinter import filedialog
 from threading import Thread
 import tkinter.simpledialog
 import tkinter.messagebox
 from myGmail import *
-global putty_shell
+import pyautogui
 import pyperclip
 import platform
 import smtplib
+import time
 if platform.system() == 'Darwin':
     from ttwidgets import TTButton as myButton
 else:
     import tkinter as tk
     from tkinter import Button as myButton
-from tkinter import filedialog
+global putty_shell
 
 
 class Begini(ConfigParser):
@@ -401,7 +403,7 @@ def record():
         if check_size(out_path.get()):
             root.lift()
             print('sending message')
-            thread = Thread(target=Send_Email, kwargs={
+            thread = Thread(target=send_email, kwargs={
                 'subject': subject,  # Subject of mail
                 'message': message}  # The message you want
             )
@@ -411,8 +413,8 @@ def record():
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-def Send_Email(email=my_email, password=my_app_password, to=my_email, subject='undefined', message='undefined'):
-    """Sends email to the respected receiver."""
+def send_email(email=my_email, password=my_app_password, to=my_email, subject='undefined', message='undefined'):
+    """Sends email from 'email' to 'to'"""
     try:
         # Only for gmail account.
         with smtplib.SMTP('smtp.gmail.com:587') as server:
@@ -443,18 +445,38 @@ def set_file_paths():
 
 def start():
     """After 'pushing the button' display countdown to give time to set up full screen etc"""
-    count_down_label.config(text="counting down")
     msg = 'Counting down'
-    print(f"countdown {time.get()=}")
-    time.set(time.get() - 1)
-    counter_status.config(text=f'{msg} ({time.get()}sec)')
-    if time.get() != 0:
+    print(f"countdown {countdown_time.get()=}")
+    countdown_time.set(countdown_time.get() - 1)
+    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
+    if countdown_time.get() > 0:
         root.after(1000, start)
     else:
         counter.withdraw()
+        thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
+        thread.start()
         record()  # if job is blocking then create start_button thread
 
 
+def stay_awake(up_set_min=3.):
+    """Keep computer awake using shift key when recording then return to previous state"""
+
+    # Timer starts
+    start_time = float(time.time())
+    up_time_min = 0.0
+    # FAILSAFE to FALSE feature is enabled by default so that you can easily stop execution of
+    # your pyautogui program by manually moving the mouse to the upper left corner of the screen.
+    # Once the mouse is in this location, pyautogui will throw an exception and exit.
+    pyautogui.FAILSAFE = False
+    while True and (up_time_min < up_set_min):
+        time.sleep(30.)
+        for i in range(0, 3):
+            pyautogui.press('shift')  # Shift key does not disturb fullscreen
+        up_time_min = (time.time() - start_time) / 60.
+        print(f"stay_awake: {up_time_min=}")
+    print(f"stay_awake: ending")
+        
+        
 def sync():
     if check_size(raw_path.get()):
         if video_delay.get() >= 0.0:
@@ -588,7 +610,7 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    time = tk.IntVar(root, 5)
+    countdown_time = tk.IntVar(root, 5)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
@@ -726,9 +748,7 @@ if __name__ == '__main__':
     tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     record_butt.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
-    count_down_label = tk.Label(root, text="RECORD progress shown here")
-    count_down_label.pack()
-    counter_status = tk.Label(counter)
+    counter_status = tk.Label(counter, text="Press RECORD")
     counter_status.pack()
 
     # Begin
@@ -742,3 +762,5 @@ if __name__ == '__main__':
     handle_result_ready()
     result_ready.trace_add('write', handle_result_ready)
     root.mainloop()
+    counter.mainloop()
+    counter.withdraw()
