@@ -19,21 +19,23 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
 """Define a class to manage configuration using files for memory (poor man's database)"""
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
 from configparser import ConfigParser
+from datetime import timedelta
+from threading import Thread
+import tkinter.simpledialog
+import tkinter.messagebox
+from myGmail import *
+global putty_shell
+import pyperclip
 import platform
+import smtplib
 if platform.system() == 'Darwin':
     from ttwidgets import TTButton as myButton
 else:
     import tkinter as tk
     from tkinter import Button as myButton
 from tkinter import filedialog
-import tkinter.simpledialog
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
-import tkinter.messagebox
-import pyperclip
-from datetime import timedelta
-global putty_shell
-
 
 # Begini - configuration class using .ini files
 class Begini(ConfigParser):
@@ -235,7 +237,7 @@ def handle_folder_path(*args):
         confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
         if confirmation is False:
             print('enter different folder or title first row')
-            tkinter.messagebox.showwarning(message='enter different folder or title first row')
+            tk.messagebox.showwarning(message='enter different folder or title first row')
             overwriting.set(False)
             folder_butt.config(bg=bg_color)
             title_butt.config(bg=bg_color)
@@ -399,8 +401,39 @@ def record():
         raw_path.set(rf)  # screencast may cause null filename if fails
         result_ready.set(rr)
         sync()
-    else:
-        print('aborting recording....need to enter title.  Presently = ', title.get())
+        subject = title.get()
+        message = 'Complete'
+        if check_size(out_path.get()):
+            root.lift()
+            print('sending message')
+            thread = Thread(target=Send_Email, kwargs={
+                'subject': subject,  # Subject of mail
+                'message': message}  # The message you want
+            )
+            thread.start()
+            tk.Message(root, text="done")
+            # tk.messagebox.showinfo(title='Screencast', message='files ready')
+        else:
+            print('aborting recording....need to enter title.  Presently = ', title.get())
+
+
+# send a message of completion
+def Send_Email(email=my_email, password=my_app_password, to=my_email, subject='undefined', message='undefined'):
+    """Sends email to the respected receiver."""
+    try:
+        # Only for gmail account.
+        with smtplib.SMTP('smtp.gmail.com:587') as server:
+            server.ehlo()  # local host
+            server.starttls()  # Puts the connection to the SMTP server.
+            # login to the account of the sender
+            server.login(email, password)
+            # Format the subject and message together
+            message = 'Subject: {}\n\n{}'.format(subject, message)
+            # Sends the email from the login email to the receiver's email
+            server.sendmail(email, to, message)
+            print('Email sent')
+    except Exception as e:
+        print("Email failed:", e)
 
 
 # Use 'title' and 'folder' to set paths of all files used
@@ -419,10 +452,10 @@ def sync():
     if check_size(raw_path.get()):
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_path.get(),
-                             output_file=os.path.join(os.getcwd(), out_path.get()))
+                             output_file=out_path.get())
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
-                             output_file=os.path.join(os.getcwd(), out_path.get()))
+                             output_file=out_path.get())
         tuners.sync_tuner_butt.config(bg='lightgreen', activebackground='lightgreen', fg='red', activeforeground='purple')
     else:
         print("record first *******")
@@ -554,14 +587,6 @@ if __name__ == '__main__':
     title = tk.StringVar(root, cf[SYS]['title'])
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
-    # out_file = tk.StringVar(root, title.get()+'.mkv')
-    # out_path = tk.StringVar(root, os.path.join(folder.get(), out_file.get()))
-    # raw_file = tk.StringVar(root, title.get() + '_raw.mkv')
-    # raw_path = tk.StringVar(root, os.path.join(folder.get(), raw_file.get()))
-    # raw_clip_file = tk.StringVar(root, title.get() + '_clip_raw.mkv')
-    # raw_clip_path = tk.StringVar(root, os.path.join(folder.get(), raw_clip_file.get()))
-    # clip_file = tk.StringVar(root, title.get() + '_clip.mkv')
-    # clip_path = tk.StringVar(root, os.path.join(folder.get(), clip_file.get()))
     out_file = tk.StringVar(root)
     out_path = tk.StringVar(root)
     raw_file = tk.StringVar(root)
