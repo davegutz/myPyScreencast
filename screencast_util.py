@@ -378,7 +378,7 @@ def overwrite_query(msg, b1=('yes', 'yes'), b2=('no', 'no'), b3=('all', 'all'), 
     t = time in seconds (int or float) until the msgbox automatically closes
     entry = include an entry widget that will have its contents returned: True or False
     """
-    # msgbox = MessageBox(msg, b1, b2, b3, b4, b5, frame_, t, entry)
+    msgbox = MessageBox(msg, b1, b2, b3, b4, b5, frame_, t, entry)
     msgbox.root.mainloop()
     # the function pauses here until the mainloop is quit
     msgbox.root.withdraw()
