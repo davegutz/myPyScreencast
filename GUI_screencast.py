@@ -408,6 +408,7 @@ def record():
                 'message': message}  # The message you want
             )
             thread.start()
+            pyautogui.press('F5')  # Attempt to exit fullscreen
             tk.messagebox.showinfo(title='Screencast', message='files ready')
         else:
             print('aborting recording....need to enter title.  Presently = ', title.get())
@@ -559,7 +560,8 @@ if __name__ == '__main__':
     - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
-      That is done outside this program."""
+      That is done outside this program.
+    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
     elif SYS == 'Windows':
         doc = """Screencast (Windows):  RECORD while a video is playing full screen.\n \
     - Get yourself ready to run the system entirely on one display (unplug the other).\n \
@@ -574,7 +576,8 @@ if __name__ == '__main__':
     - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
-      That is done outside this program."""
+      That is done outside this program.
+    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
     elif SYS == 'Darwin':
         doc = """Screencast (MacOS):  RECORD while a video is playing on Opera.\n \
     - The MacOS version has choppy continuity and stutters (cause TBD).
@@ -590,7 +593,8 @@ if __name__ == '__main__':
     - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
-      That is done outside this program."""
+      That is done outside this program.
+    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
     else:
         print('os unknown')
 
