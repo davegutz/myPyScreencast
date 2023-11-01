@@ -414,7 +414,7 @@ def record():
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-def send_email(email=my_email, password=my_app_password, to=my_email, subject='undefined', message='undefined'):
+def send_email(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
     try:
         # Only for gmail account.
@@ -427,7 +427,7 @@ def send_email(email=my_email, password=my_app_password, to=my_email, subject='u
             message = 'Subject: {}\n\n{}'.format(subject, message)
             # Sends the email from the login email to the receiver's email
             server.sendmail(email, to, message)
-            print('Email sent')
+            print('Message sent')
     except Exception as e:
         print("Email failed:", e)
 
