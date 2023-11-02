@@ -30,6 +30,7 @@ import pyautogui
 import pyperclip
 import platform
 import smtplib
+import shutil
 import time
 if platform.system() == 'Darwin':
     from ttwidgets import TTButton as myButton
@@ -147,6 +148,16 @@ def enter_crf():
     crf_butt.config(text=crf.get())
 
 
+def enter_destination_folder():
+    answer = tk.filedialog.askdirectory(title="Select a destination (i.e. Library) folder", initialdir=destination_folder.get())
+    if answer is not None and answer != '':
+        destination_folder.set(answer)
+    cf[SYS]['destination_folder'] = destination_folder.get()
+    cf.save_to_file()
+    destination_folder_butt.config(text=destination_folder.get())
+    update_file_paths()
+
+
 def enter_folder():
     answer = tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=folder.get())
     if answer is not None and answer != '':
@@ -208,8 +219,9 @@ def enter_video_in():
     video_in_butt.config(text=video_in.get())
 
 
-def handle_folder_path(*args):
-    if os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()) > 0:  # bytes
+def handle_destination_path(*args):
+    new_result_ready.set(False)
+    if size_of(destination_path.get()) > 0:  # bytes
         confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
         if confirmation is False:
             print('enter different folder or title first row')
@@ -233,9 +245,9 @@ def handle_raw_path(*args):
     update_file_paths()
 
 
-def handle_result_ready(*args):
-    if os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()) > 0:  # bytes
-        if result_ready.get():
+def handle_new_result_ready(*args):
+    if size_of(out_path.get()) > 0:  # bytes
+        if new_result_ready.get():
             overwriting.set(False)
             paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
             record_time = length(raw_path.get(), silent=silent.get())
@@ -341,8 +353,6 @@ def open_tuner_window():
     handle_clip_path()
     clip_path.trace_add('write', handle_clip_path)
     handle_raw_path()
-    # handle_folder_path()
-    # handle_result_ready()
 
 
 def paint(tk_object, bg='lightgray', fg='black', activebackground=None, activeforeground=None):
@@ -357,6 +367,9 @@ def record():
     if title.get() == '<enter title>' or title.get() == '' or title.get() == 'None':
         enter_title()
     if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
+        print('sending message')
+        thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Starting'+str(rec_time.get())})
+        thread.start()
         rf, rr = screencast(silent=silent.get(),
                             video_grabber=video_grab.get(), video_in=video_in.get(),
                             audio_grabber=audio_grab.get(), audio_in=audio_in.get(),
@@ -364,17 +377,13 @@ def record():
                             rec_time=rec_time.get()*60.,
                             output_file=raw_path.get())
         raw_path.set(rf)  # screencast may cause null filename if fails
-        result_ready.set(rr)
+        new_result_ready.set(rr)
         sync()
-        subject = title.get()
-        message = 'Complete'
-        if size_of(out_path.get()) > 0:
+        shutil.move(out_path.get(), destination_path.get())
+        if size_of(destination_path.get()) > 0:
             root.lift()
             print('sending message')
-            thread = Thread(target=send_email, kwargs={
-                'subject': subject,  # Subject of mail
-                'message': message}  # The message you want
-            )
+            thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Complete'})
             thread.start()
             pyautogui.press('F5')  # Attempt to exit fullscreen
             tk.messagebox.showinfo(title='Screencast', message='files ready')
@@ -382,60 +391,20 @@ def record():
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-def send_email(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
+def send_message(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
     try:
         # Only for gmail account.
         with smtplib.SMTP('smtp.gmail.com:587') as server:
             server.ehlo()  # local host
-            server.starttls()  # Puts the connection to the SMTP server.
-            # login to the account of the sender
+            server.starttls()  # Puts the connection to the SMTP server
             server.login(email, password)
             # Format the subject and message together
             message = 'Subject: {}\n\n{}'.format(subject, message)
-            # Sends the email from the login email to the receiver's email
             server.sendmail(email, to, message)
             print('Message sent')
     except Exception as e:
-        print("Email failed:", e)
-
-
-def update_file_paths():
-    """Use 'title' and 'folder' to set paths of all files used"""
-    if title.get() == '' or title.get() == '<enter title>':
-        paint(title_butt, bg='pink')
-    else:
-        paint(title_butt, bg=bg_color)
-    out_file.set(title.get()+'.mkv')
-    if os.path.exists(folder.get()):
-        paint(folder_butt, bg='lightgreen')
-    else:
-        paint(folder_butt, bg='pink')
-    out_path.set(os.path.join(folder.get(), out_file.get()))
-    if size_of(out_path.get()) > 0:
-        paint(title_butt, bg='lightgreen')
-    else:
-        paint(title_butt, bg=bg_color)
-    raw_file.set(title.get() + '_raw.mkv')
-    raw_path.set(os.path.join(folder.get(), raw_file.get()))
-    if size_of(raw_path.get()) > 0:
-        paint(raw_path_label, bg='yellow')
-        paint(tuners.raw_path_label, bg='yellow')
-    else:
-        paint(raw_path_label, bg=bg_color)
-        paint(tuners.raw_path_label, bg=bg_color)
-    raw_clip_file.set(title.get() + '_clip_raw.mkv')
-    raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
-    if size_of(raw_clip_path.get()) > 0:
-        paint(tuners.raw_clip_file_label, bg='yellow')
-    else:
-        paint(tuners.raw_clip_file_label, bg=bg_color)
-    if size_of(clip_path.get()) > 0:
-        paint(tuners.clip_path_label, bg='yellow')
-    else:
-        paint(tuners.clip_path_label, bg=bg_color)
-    clip_file.set(title.get() + '_clip.mkv')
-    clip_path.set(os.path.join(folder.get(), clip_file.get()))
+        print("send_message failed:", e)
 
 
 def start():
@@ -498,6 +467,51 @@ def sync_clip():
         print("record first *******")
 
 
+def update_file_paths():
+    """Use 'title' and 'folder' to set paths of all files used"""
+    if title.get() == '' or title.get() == '<enter title>':
+        paint(title_butt, bg='pink')
+    else:
+        paint(title_butt, bg=bg_color)
+    out_file.set(title.get()+'.mkv')
+    if os.path.exists(folder.get()):
+        paint(folder_butt, bg='lightgreen')
+    else:
+        paint(folder_butt, bg='pink')
+    out_path.set(os.path.join(folder.get(), out_file.get()))
+    new_destination_path = os.path.join(destination_folder.get(), out_file.get())
+    if new_destination_path != destination_path.get():
+        destination_path.set(new_destination_path)
+    if size_of(destination_path.get()) > 0:
+        paint(title_butt, bg='yellow')
+    else:
+        paint(title_butt, bg=bg_color)
+    if os.path.exists(destination_folder.get()):
+        paint(destination_folder_butt, bg='lightgreen')
+    else:
+        paint(destination_folder_butt, bg='pink')
+    raw_file.set(title.get() + '_raw.mkv')
+    raw_path.set(os.path.join(folder.get(), raw_file.get()))
+    if size_of(raw_path.get()) > 0:
+        paint(raw_path_label, bg='yellow')
+        paint(tuners.raw_path_label, bg='yellow')
+    else:
+        paint(raw_path_label, bg=bg_color)
+        paint(tuners.raw_path_label, bg=bg_color)
+    raw_clip_file.set(title.get() + '_clip_raw.mkv')
+    raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
+    if size_of(raw_clip_path.get()) > 0:
+        paint(tuners.raw_clip_file_label, bg='yellow')
+    else:
+        paint(tuners.raw_clip_file_label, bg=bg_color)
+    if size_of(clip_path.get()) > 0:
+        paint(tuners.clip_path_label, bg='yellow')
+    else:
+        paint(tuners.clip_path_label, bg=bg_color)
+    clip_file.set(title.get() + '_clip.mkv')
+    clip_path.set(os.path.join(folder.get(), clip_file.get()))
+
+
 if __name__ == '__main__':
     import os
     import tkinter as tk
@@ -505,7 +519,8 @@ if __name__ == '__main__':
 
     # Configuration for entire folder selection read with filepaths
     def_dict = {
-                'Linux':   {"folder": '<enter destination folder>',
+                'Linux':   {"folder": '<enter working folder>',
+                            "destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
                             "rec_time": '0.1',
                             "crf": '25',
@@ -516,7 +531,8 @@ if __name__ == '__main__':
                             "silent": '1',
                             "video_delay": '0.0',
                             "overwriting": '0'},
-                'Windows': {"folder": '<enter destination folder>',
+                'Windows': {"folder": '<enter working folder>',
+                            "destination_folder": '<enter destination folder>',
                             "title": '<enter title>',
                             "rec_time": '0.1',
                             "crf": '28',
@@ -527,7 +543,8 @@ if __name__ == '__main__':
                             "silent": '1',
                             "video_delay": '0.0',
                             "overwriting": '0'},
-                'Darwin':  {"folder": '<enter destination folder>',
+                'Darwin':  {"folder": '<enter working folder>',
+                            "destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
                             "rec_time": '0.1',
                             "crf": '25',
@@ -613,6 +630,7 @@ if __name__ == '__main__':
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
     folder = tk.StringVar(root, cf[SYS]['folder'])
+    destination_folder = tk.StringVar(root, cf[SYS]['destination_folder'])
     title = tk.StringVar(root, cf[SYS]['title'])
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
@@ -634,18 +652,23 @@ if __name__ == '__main__':
     hms = tk.StringVar(root, '')
     out_file = tk.StringVar(root)
     out_path = tk.StringVar(root)
+    destination_path = tk.StringVar(root)
     raw_file = tk.StringVar(root)
     raw_path = tk.StringVar(root)
     raw_clip_file = tk.StringVar(root)
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
+
+    # Pre-define so update_file_paths() works
     title_butt = myButton()
     folder_butt = myButton()
     raw_path_label = tk.Label()
+    destination_folder_butt = myButton()
     update_file_paths()
-    raw_path = tk.StringVar(root, raw_path.get())
-    result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
+
+    # raw_path = tk.StringVar(root, raw_path.get())
+    new_result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
     start_clip = tk.DoubleVar(root, 0.0)
     stop_clip = tk.DoubleVar(root, 0.0)
     clip_path = tk.StringVar(root, clip_path.get())
@@ -673,11 +696,15 @@ if __name__ == '__main__':
     folder_butt = myButton(name_frame, text=folder.get(), command=enter_folder, fg="blue", bg=bg_color)
     slash = tk.Label(name_frame, text="/", fg="blue", bg=bg_color)
     title_butt = myButton(name_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
-    # enter_folder(folder.get(), True)
-    # enter_title(title.get(), True)
+    destination_folder_butt = myButton(name_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
+    destination_label = tk.Label(name_frame, text="Destination =", bg=bg_color)
+    working_label = tk.Label(name_frame, text="Working folder=", bg=bg_color)
+    title_butt.pack(side="right", fill='x')
+    slash.pack(side="right", fill='x')
+    destination_folder_butt.pack(side="right", fill='x')
+    destination_label.pack(side="right", fill='x')
+    working_label.pack(side='left', fill='x')
     folder_butt.pack(side="left", fill='x')
-    slash.pack(side="left", fill='x')
-    title_butt.pack(side="left", fill='x')
 
     # Recording length row
     length_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -753,12 +780,12 @@ if __name__ == '__main__':
     # Begin
     handle_raw_path()
     raw_path.trace_add('write', handle_raw_path)
-    handle_folder_path()
-    out_path.trace_add('write', handle_folder_path)
+    handle_destination_path()
+    destination_path.trace_add('write', handle_destination_path)
     handle_silent()
     silent.trace_add('write', handle_silent)
-    handle_result_ready()
-    result_ready.trace_add('write', handle_result_ready)
+    handle_new_result_ready()
+    new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
     counter.mainloop()
     counter.withdraw()
