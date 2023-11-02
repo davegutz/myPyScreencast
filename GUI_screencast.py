@@ -18,7 +18,7 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of
 from configparser import ConfigParser
 from datetime import timedelta
 from tkinter import filedialog
@@ -219,19 +219,22 @@ def enter_video_in():
     video_in_butt.config(text=video_in.get())
 
 
-def handle_destination_path(*args):
+def handle_target_path(*args):
     new_result_ready.set(False)
-    if size_of(destination_path.get()) > 0:  # bytes
-        tk.messagebox.showwarning(message='output file exists')
-    cf.save_to_file()
-    record_time = length(raw_path.get(), silent=silent.get())
-    if record_time is not None:
-        raw_time.set(record_time / 60.)
+    if size_of(target_path.get()) > 0:  # bytes
+        tk.messagebox.showwarning(message='target file exists')
+    if size_of(raw_path.get()) > 0:  # bytes
+        record_time = length_of(raw_path.get(), silent=silent.get())
+        if record_time is not None:
+            raw_time.set(record_time / 60.)
+        else:
+            raw_time.set(0.)
     else:
         raw_time.set(0.)
     hms.set("hms=" + str(timedelta(minutes=raw_time.get())))
     hms_label.config(text=hms.get())
     tuners.hms_label.config(text=hms.get())
+    cf.save_to_file()
     update_file_paths()
 
 
@@ -243,7 +246,7 @@ def handle_new_result_ready(*args):
     if size_of(out_path.get()) > 0:  # bytes
         if new_result_ready.get():
             paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
-            record_time = length(raw_path.get(), silent=silent.get())
+            record_time = length_of(raw_path.get(), silent=silent.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
             else:
@@ -380,14 +383,20 @@ def record():
         raw_path.set(rf)  # screencast may cause null filename if fails
         new_result_ready.set(rr)
         sync()
-        shutil.move(out_path.get(), destination_path.get())
-        if size_of(destination_path.get()) > 0:
+        shutil.move(out_path.get(), target_path.get())
+        if size_of(target_path.get()) > 0:
             root.lift()
             print('sending message')
-            thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Complete'})
+            print("record:  target_path.get()=", target_path.get(), " type =", type(target_path.get()))
+            if abs(length_of(target_path.get()) - rec_time.get()) < 1:
+                msg = 'target ready'
+                print(f"record:  actual {length_of(target_path.get())} != demand {rec_time.get()}")
+            else:
+                msg = 'Done but >1 min size difference'
+            thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': msg})
             thread.start()
             pyautogui.press('F5')  # Attempt to exit fullscreen
-            tk.messagebox.showinfo(title='Screencast', message='files ready')
+            tk.messagebox.showinfo(title='Screencast', message=msg)
             update_file_paths()
         else:
             print('aborting recording....need to enter title.  Presently = ', title.get())
@@ -411,8 +420,8 @@ def send_message(email=my_email, password=my_app_password, to=my_text, subject='
 
 def start():
     """After 'pushing the button' check if over-writing then start countdown"""
-    if size_of(destination_path.get()) > 0:  # bytes
-        confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite?')
+    if size_of(target_path.get()) > 0:  # bytes
+        confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
         if confirmation is False:
             print('enter different folder or title first row')
             tk.messagebox.showwarning(message='enter different folder or title first row')
@@ -492,10 +501,10 @@ def update_file_paths():
     else:
         paint(folder_butt, bg='pink')
     out_path.set(os.path.join(folder.get(), out_file.get()))
-    new_destination_path = os.path.join(destination_folder.get(), out_file.get())
-    if new_destination_path != destination_path.get():
-        destination_path.set(new_destination_path)
-    if size_of(destination_path.get()) > 0:
+    new_target_path = os.path.join(destination_folder.get(), out_file.get())
+    if new_target_path != target_path.get():
+        target_path.set(new_target_path)
+    if size_of(target_path.get()) > 0:
         paint(title_butt, bg='yellow')
     else:
         paint(title_butt, bg=bg_color)
@@ -665,7 +674,7 @@ if __name__ == '__main__':
     hms = tk.StringVar(root, '')
     out_file = tk.StringVar(root)
     out_path = tk.StringVar(root)
-    destination_path = tk.StringVar(root)
+    target_path = tk.StringVar(root)
     raw_file = tk.StringVar(root)
     raw_path = tk.StringVar(root)
     raw_clip_file = tk.StringVar(root)
@@ -710,12 +719,12 @@ if __name__ == '__main__':
     folder_butt = myButton(name_frame, text=folder.get(), command=enter_folder, fg="blue", bg=bg_color)
     working_label.pack(side='left', fill='x')
     folder_butt.pack(side="left", fill='x')
-    dest_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
-    dest_frame.pack(fill='x')
-    destination_label = tk.Label(dest_frame, text="Destination =", bg=bg_color)
-    destination_folder_butt = myButton(dest_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
-    slash = tk.Label(dest_frame, text="/", fg="blue", bg=bg_color)
-    title_butt = myButton(dest_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
+    target_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
+    target_frame.pack(fill='x')
+    destination_label = tk.Label(target_frame, text="Target =", bg=bg_color)
+    destination_folder_butt = myButton(target_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
+    slash = tk.Label(target_frame, text="/", fg="blue", bg=bg_color)
+    title_butt = myButton(target_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
     destination_label.pack(side="left", fill='x')
     destination_folder_butt.pack(side="left", fill='x')
     slash.pack(side="left", fill='x')
@@ -798,8 +807,8 @@ if __name__ == '__main__':
     # Begin
     handle_raw_path()
     raw_path.trace_add('write', handle_raw_path)
-    handle_destination_path()
-    destination_path.trace_add('write', handle_destination_path)
+    handle_target_path()
+    target_path.trace_add('write', handle_target_path)
     handle_silent()
     silent.trace_add('write', handle_silent)
     handle_instructions()
