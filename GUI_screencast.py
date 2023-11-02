@@ -82,7 +82,7 @@ class Global:
         self.hms_label = tk.Label(owner)
         self.intermediate_file = tk.Label(owner)
         self.raw_path_label = tk.Label(owner)
-        self.raw_clip_path_label = tk.Label(owner)
+        self.raw_clip_file_label = tk.Label(owner)
         self.clip_path_label = tk.Label(owner)
         self.start_clip_butt = myButton(owner)
         self.stop_clip_butt = myButton(owner)
@@ -94,23 +94,18 @@ def add_to_clip_board(text):
     pyperclip.copy(text)
 
 
-def check_size(path):
-    if os.path.isfile(path) and os.path.getsize(path) > 0:  # bytes
-        return True
+def size_of(path):
+    if os.path.isfile(path) and (size := os.path.getsize(path)) > 0:  # bytes
+        return size
     else:
-        return False
+        return 0
 
 
 def clip_cut():
-    sf, rr = cut_clip(silent=silent.get(), raw_file=raw_path.get(),
-                      start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
-                      clip_file=clip_path.get())
-    if rr:
-        paint(tuners.raw_clip_path_label, bg='lightgreen', fg='black')
-        paint(tuners.clip_cut_butt, bg='yellow', fg='black')
-    else:
-        paint(tuners.raw_clip_path_label, bg=bg_color, fg='black')
-        paint(tuners.clip_cut_butt, bg='red', fg='black')
+    cut_clip(silent=silent.get(), raw_file=raw_path.get(),
+             start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
+             clip_file=clip_path.get())
+    update_file_paths()
 
 
 def contain_all(testpath):
@@ -157,15 +152,10 @@ def enter_folder():
     answer = tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=folder.get())
     if answer is not None and answer != '':
         folder.set(answer)
-    if folder.get() == '' or folder.get() == '<enter destination folder>':
-        folder.set('<enter destination folder>')
-        paint(folder_butt, bg='pink')
-    else:
-        paint(folder_butt, bg=bg_color)
     cf[SYS]['folder'] = folder.get()
     cf.save_to_file()
     folder_butt.config(text=folder.get())
-    set_file_paths()
+    update_file_paths()
 
 
 def enter_rec_time():
@@ -189,15 +179,12 @@ def enter_title():
     answer = tk.simpledialog.askstring(title=__file__, prompt="enter title", initialvalue=title.get())
     if answer is not None:
         title.set(answer)
-    if title.get() == '' or title.get() == '<enter title>':
+    if title.get() == '':
         title.set('<enter title>')
-        paint(title_butt, bg='pink')
-    else:
-        paint(title_butt, bg=bg_color)
     cf[SYS]['title'] = title.get()
     cf.save_to_file()
     title_butt.config(text=title.get())
-    set_file_paths()
+    update_file_paths()
 
 
 def enter_video_delay():
@@ -205,9 +192,7 @@ def enter_video_delay():
     cf[SYS]['video_delay'] = str(video_delay.get())
     cf.save_to_file()
     video_delay_butt.config(text=str(video_delay.get()))
-    paint(video_delay_butt, bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
     tuners.video_delay_tuner_butt.config(text=str(video_delay.get()))
-    paint(tuners.sync_tuner_butt, bg=bg_color, activebackground=bg_color, fg='black', activeforeground='purple')
 
 
 def enter_video_grab():
@@ -232,12 +217,8 @@ def handle_folder_path(*args):
             print('enter different folder or title first row')
             tk.messagebox.showwarning(message='enter different folder or title first row')
             overwriting.set(False)
-            paint(folder_butt, bg=bg_color)
-            paint(title_butt, bg=bg_color)
         else:
             overwriting.set(True)
-            paint(folder_butt, bg='yellow')
-            paint(title_butt, bg='yellow')
     cf.save_to_file()
     record_time = length(raw_path.get(), silent=silent.get())
     if record_time is not None:
@@ -247,26 +228,19 @@ def handle_folder_path(*args):
     hms.set("hms=" + str(timedelta(minutes=raw_time.get())))
     hms_label.config(text=hms.get())
     tuners.hms_label.config(text=hms.get())
+    update_file_paths()
 
 
 def handle_raw_path(*args):
     print(f"handle_raw_path: {raw_path.get()=}")
-    if os.path.isfile(raw_path.get()) and os.path.getsize(raw_path.get()) > 0:  # bytes
-        print("coloring green")
-        tuners.raw_path_label.config(text=raw_path.get())
-        paint(tuners.raw_path_label, 'lightgreen', 'black')
-    else:
-        print("coloring plain")
-        tuners.raw_path_label.config(text=raw_path.get())
-        paint(tuners.raw_path_label, bg_color, 'black')
+    update_file_paths()
+
 
 def handle_result_ready(*args):
     print(f"handle_folder_path {out_path.get()=}")
     if os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()) > 0:  # bytes
         if result_ready.get():
             overwriting.set(False)
-            paint(folder_butt, bg='lightgreen')
-            paint(title_butt, bg='lightgreen')
             paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
             record_time = length(raw_path.get(), silent=silent.get())
             if record_time is not None:
@@ -278,18 +252,13 @@ def handle_result_ready(*args):
             tuners.hms_label.config(text=hms.get())
         else:
             overwriting.set(True)
-            paint(folder_butt, bg=bg_color)
-            paint(title_butt, bg=bg_color)
             paint(record_butt, bg='red', activebackground='red', fg='white', activeforeground='purple')
 
 
 def handle_clip_path(*args):
     """Tuner window"""
     print(f"handle_clip_path {clip_path.get()=}")
-    if os.path.isfile(clip_path.get()) and os.path.getsize(clip_path.get()) > 0:  # bytes
-        paint(tuners.raw_clip_path_label, bg=bg_color)
-    else:
-        paint(tuners.raw_clip_path_label, bg='yellow')
+    update_file_paths()
 
 
 def handle_silent(*args):
@@ -335,18 +304,18 @@ def open_tuner_window():
     # Raw clip
     raw_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_clip_frame.pack(side=tk.TOP)
-    tuners.clip_cut_butt = myButton(raw_clip_frame, text=" CLIP IT ", command=clip_cut, bg='lightyellow', fg='black')
+    tuners.clip_cut_butt = myButton(raw_clip_frame, text=" CLIP IT ", command=clip_cut, bg=bg_color, fg='black')
     raw_clip_label = tk.Label(raw_clip_frame, text="Clip file=", bg=bg_color)
-    tuners.raw_clip_path_label = tk.Label(raw_clip_frame, text=raw_clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    tuners.raw_clip_path_label.config(bg=bg_color)
+    tuners.raw_clip_file_label = tk.Label(raw_clip_frame, text=raw_clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.raw_clip_file_label.config(bg=bg_color)
     tuners.clip_cut_butt.pack(side="left", fill='x')
     raw_clip_label.pack(side="left", fill='x')
-    tuners.raw_clip_path_label.pack(side="left", fill='x')
+    tuners.raw_clip_file_label.pack(side="left", fill='x')
 
     # Sync clip
     sync_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_clip_frame.pack(side=tk.TOP)
-    tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=sync_clip, bg='lightyellow', fg='black')
+    tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=sync_clip, bg=bg_color, fg='black')
     sync_clip_label = tk.Label(sync_clip_frame, text="Sync clip=", bg=bg_color)
     tuners.clip_path_label = tk.Label(sync_clip_frame, text=clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.clip_path_label.config(bg=bg_color)
@@ -405,7 +374,7 @@ def record():
         sync()
         subject = title.get()
         message = 'Complete'
-        if check_size(out_path.get()):
+        if size_of(out_path.get()) > 0:
             root.lift()
             print('sending message')
             thread = Thread(target=send_email, kwargs={
@@ -437,14 +406,39 @@ def send_email(email=my_email, password=my_app_password, to=my_text, subject='un
         print("Email failed:", e)
 
 
-def set_file_paths():
+def update_file_paths():
     """Use 'title' and 'folder' to set paths of all files used"""
+    if title.get() == '' or title.get() == '<enter title>':
+        paint(title_butt, bg='pink')
+    else:
+        paint(title_butt, bg=bg_color)
     out_file.set(title.get()+'.mkv')
+    if os.path.exists(folder.get()):
+        paint(folder_butt, bg='lightgreen')
+    else:
+        paint(folder_butt, bg='pink')
     out_path.set(os.path.join(folder.get(), out_file.get()))
+    if size_of(out_path.get()) > 0:
+        paint(title_butt, bg='lightgreen')
+    else:
+        paint(title_butt, bg=bg_color)
     raw_file.set(title.get() + '_raw.mkv')
     raw_path.set(os.path.join(folder.get(), raw_file.get()))
+    print(f"{raw_path.get()=}")
+    if size_of(raw_path.get()) > 0:
+        paint(tuners.raw_path_label, bg='yellow')
+    else:
+        paint(tuners.raw_path_label, bg=bg_color)
     raw_clip_file.set(title.get() + '_clip_raw.mkv')
     raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
+    if size_of(raw_clip_path.get()) > 0:
+        paint(tuners.raw_clip_file_label, bg='yellow')
+    else:
+        paint(tuners.raw_clip_file_label, bg=bg_color)
+    if size_of(clip_path.get()) > 0:
+        paint(tuners.clip_path_label, bg='yellow')
+    else:
+        paint(tuners.clip_path_label, bg=bg_color)
     clip_file.set(title.get() + '_clip.mkv')
     clip_path.set(os.path.join(folder.get(), clip_file.get()))
 
@@ -484,27 +478,27 @@ def stay_awake(up_set_min=3.):
         
         
 def sync():
-    if check_size(raw_path.get()):
+    if size_of(raw_path.get()) > 0:
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_path.get(),
                              output_file=out_path.get())
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
                              output_file=out_path.get())
-        paint(tuners.sync_tuner_butt, bg='lightgreen', fg='red', activeforeground='purple')
+        update_file_paths()
     else:
         print("record first *******")
 
 
 def sync_clip():
-    if check_size(raw_clip_path.get()):
+    if size_of(raw_clip_path.get()) > 0:
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_clip_path.get(),
                              output_file=os.path.join(os.getcwd(), clip_path.get()))
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_clip_path.get(),
                              output_file=os.path.join(os.getcwd(), clip_path.get()))
-        paint(tuners.sync_clip_tuner_butt, bg='lightgreen', fg='red', activeforeground='purple')
+        update_file_paths()
     else:
         print("record first *******")
 
@@ -651,9 +645,11 @@ if __name__ == '__main__':
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
-    set_file_paths()
+    title_butt = myButton()
+    folder_butt = myButton()
+    update_file_paths()
     raw_path = tk.StringVar(root, raw_path.get())
-    result_ready = tk.BooleanVar(root, check_size(out_path.get()))
+    result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
     start_clip = tk.DoubleVar(root, 0.0)
     stop_clip = tk.DoubleVar(root, 0.0)
     clip_path = tk.StringVar(root, clip_path.get())
@@ -760,7 +756,6 @@ if __name__ == '__main__':
     counter_status.pack()
 
     # Begin
-    print("call handle_raw_path")
     handle_raw_path()
     raw_path.trace_add('write', handle_raw_path)
     handle_folder_path()
