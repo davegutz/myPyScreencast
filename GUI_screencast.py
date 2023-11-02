@@ -69,7 +69,6 @@ class Begini(ConfigParser):
     def save_to_file(self):
         with open(self.config_path, 'w') as cfg_file:
             self.write(cfg_file)
-        print('wrote', self.config_path)
 
 
 class Global:
@@ -80,7 +79,7 @@ class Global:
         self.sync_clip_tuner_butt = myButton(owner)
         self.video_delay_tuner_butt = myButton(owner)
         self.hms_label = tk.Label(owner)
-        self.intermediate_file = tk.Label(owner)
+        self.intermediate_file_label = tk.Label(owner)
         self.raw_path_label = tk.Label(owner)
         self.raw_clip_file_label = tk.Label(owner)
         self.clip_path_label = tk.Label(owner)
@@ -210,7 +209,6 @@ def enter_video_in():
 
 
 def handle_folder_path(*args):
-    print(f"handle_folder_path {out_path.get()=}")
     if os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()) > 0:  # bytes
         confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
         if confirmation is False:
@@ -232,12 +230,10 @@ def handle_folder_path(*args):
 
 
 def handle_raw_path(*args):
-    print(f"handle_raw_path: {raw_path.get()=}")
     update_file_paths()
 
 
 def handle_result_ready(*args):
-    print(f"handle_folder_path {out_path.get()=}")
     if os.path.isfile(out_path.get()) and os.path.getsize(out_path.get()) > 0:  # bytes
         if result_ready.get():
             overwriting.set(False)
@@ -257,12 +253,10 @@ def handle_result_ready(*args):
 
 def handle_clip_path(*args):
     """Tuner window"""
-    print(f"handle_clip_path {clip_path.get()=}")
     update_file_paths()
 
 
 def handle_silent(*args):
-    print(f"handle_silent {silent.get()=} {title.get()=}")
     cf[SYS]['silent'] = str(silent.get())
     cf.save_to_file()
 
@@ -424,10 +418,11 @@ def update_file_paths():
         paint(title_butt, bg=bg_color)
     raw_file.set(title.get() + '_raw.mkv')
     raw_path.set(os.path.join(folder.get(), raw_file.get()))
-    print(f"{raw_path.get()=}")
     if size_of(raw_path.get()) > 0:
+        paint(raw_path_label, bg='yellow')
         paint(tuners.raw_path_label, bg='yellow')
     else:
+        paint(raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
     raw_clip_file.set(title.get() + '_clip_raw.mkv')
     raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
@@ -647,6 +642,7 @@ if __name__ == '__main__':
     clip_path = tk.StringVar(root)
     title_butt = myButton()
     folder_butt = myButton()
+    raw_path_label = tk.Label()
     update_file_paths()
     raw_path = tk.StringVar(root, raw_path.get())
     result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
@@ -739,8 +735,7 @@ if __name__ == '__main__':
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    raw_path_label = tk.Label(action_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
-    raw_path_label.config(bg=bg_color)
+    raw_path_label = tk.Label(action_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
     raw_path_label.pack(side="right", fill='x')
     action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
     action_label.pack(side="right", fill='x')
