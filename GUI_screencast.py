@@ -222,13 +222,7 @@ def enter_video_in():
 def handle_destination_path(*args):
     new_result_ready.set(False)
     if size_of(destination_path.get()) > 0:  # bytes
-        confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite later?')
-        if confirmation is False:
-            print('enter different folder or title first row')
-            tk.messagebox.showwarning(message='enter different folder or title first row')
-            overwriting.set(False)
-        else:
-            overwriting.set(True)
+        tk.messagebox.showwarning(message='output file exists')
     cf.save_to_file()
     record_time = length(raw_path.get(), silent=silent.get())
     if record_time is not None:
@@ -408,13 +402,28 @@ def send_message(email=my_email, password=my_app_password, to=my_text, subject='
 
 
 def start():
-    """After 'pushing the button' display countdown to give time to set up full screen etc"""
+    """After 'pushing the button' check if over-writing then start countdown"""
+    # Check if over-writing and confirm
+    if size_of(destination_path.get()) > 0:  # bytes
+        confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite?')
+        if confirmation is False:
+            print('enter different folder or title first row')
+            tk.messagebox.showwarning(message='enter different folder or title first row')
+            overwriting.set(False)
+            return
+        else:
+            overwriting.set(True)
+            start_countdown()
+
+
+def start_countdown():
+    """Countdown then call record()"""
     msg = 'Counting down'
     print(f"countdown {countdown_time.get()=}")
     countdown_time.set(countdown_time.get() - 1)
     counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
-        root.after(1000, start)
+        root.after(1000, start_countdown)
     else:
         counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
@@ -625,7 +634,7 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    countdown_time = tk.IntVar(root, 5)
+    countdown_time = tk.IntVar(root, 8)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
@@ -770,7 +779,8 @@ if __name__ == '__main__':
     # Record row
     record_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     record_frame.pack(fill='x')
-    record_butt = myButton(record_frame, text='****    START      ****', command=start, fg='white', bg='red', wraplength=wrap_length, justify=tk.CENTER)
+    record_butt = myButton(record_frame, text='****    START      ****', command=start, fg='white', bg='red',
+                           wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     record_butt.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
