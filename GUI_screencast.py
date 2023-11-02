@@ -242,7 +242,6 @@ def handle_raw_path(*args):
 def handle_new_result_ready(*args):
     if size_of(out_path.get()) > 0:  # bytes
         if new_result_ready.get():
-            overwriting.set(False)
             paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
             record_time = length(raw_path.get(), silent=silent.get())
             if record_time is not None:
@@ -253,13 +252,21 @@ def handle_new_result_ready(*args):
             hms_label.config(text=hms.get())
             tuners.hms_label.config(text=hms.get())
         else:
-            overwriting.set(True)
             paint(record_butt, bg='red', activebackground='red', fg='white', activeforeground='purple')
 
 
 def handle_clip_path(*args):
     """Tuner window"""
     update_file_paths()
+
+
+def handle_instructions(*args):
+    cf[SYS]['instructions'] = str(instructions.get())
+    cf.save_to_file()
+    if instructions.get():
+        doc_block.config(text=doc)
+    else:
+        doc_block.config(text='')
 
 
 def handle_silent(*args):
@@ -362,7 +369,7 @@ def record():
         enter_title()
     if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
         print('sending message')
-        thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Starting'+str(rec_time.get())})
+        thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Starting ' + str(rec_time.get())})
         thread.start()
         rf, rr = screencast(silent=silent.get(),
                             video_grabber=video_grab.get(), video_in=video_in.get(),
@@ -381,6 +388,7 @@ def record():
             thread.start()
             pyautogui.press('F5')  # Attempt to exit fullscreen
             tk.messagebox.showinfo(title='Screencast', message='files ready')
+            update_file_paths()
         else:
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
@@ -403,17 +411,13 @@ def send_message(email=my_email, password=my_app_password, to=my_text, subject='
 
 def start():
     """After 'pushing the button' check if over-writing then start countdown"""
-    # Check if over-writing and confirm
     if size_of(destination_path.get()) > 0:  # bytes
         confirmation = tk.messagebox.askyesno('query overwrite', 'File exists:  overwrite?')
         if confirmation is False:
             print('enter different folder or title first row')
             tk.messagebox.showwarning(message='enter different folder or title first row')
-            overwriting.set(False)
             return
-        else:
-            overwriting.set(True)
-            start_countdown()
+    start_countdown()
 
 
 def start_countdown():
@@ -538,8 +542,8 @@ if __name__ == '__main__':
                             "audio_grab": 'pulse',
                             "audio_in": 'default',
                             "silent": '1',
-                            "video_delay": '0.0',
-                            "overwriting": '0'},
+                            "instructions": '1',
+                            "video_delay": '0.0'},
                 'Windows': {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
                             "title": '<enter title>',
@@ -550,8 +554,8 @@ if __name__ == '__main__':
                             "audio_grab": 'dshow',
                             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
                             "silent": '1',
-                            "video_delay": '0.0',
-                            "overwriting": '0'},
+                            "instructions": '1',
+                            "video_delay": '0.0'},
                 'Darwin':  {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
@@ -562,8 +566,8 @@ if __name__ == '__main__':
                             "audio_grab": '',
                             "audio_in": '2',
                             "silent": '1',
-                            "video_delay": '0.0',
-                            "overwriting": '0'},
+                            "instructions": '1',
+                            "video_delay": '0.0'},
                 }
     cf = Begini(__file__, def_dict)
     doc = ''
@@ -619,7 +623,7 @@ if __name__ == '__main__':
         print('os unknown')
 
     # Frame properties
-    min_width = 800
+    min_width = 600
     main_height = 500
     wrap_length = 800
     bg_color = "lightgray"
@@ -652,10 +656,10 @@ if __name__ == '__main__':
         silent = tk.BooleanVar(root, False)
     else:
         silent = tk.BooleanVar(root, True)
-    if cf[SYS]['overwriting'] == 'False':
-        overwriting = tk.BooleanVar(root, False)
+    if cf[SYS]['instructions'] == 'False':
+        instructions = tk.BooleanVar(root, False)
     else:
-        overwriting = tk.BooleanVar(root, True)
+        instructions = tk.BooleanVar(root, True)
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
@@ -699,21 +703,23 @@ if __name__ == '__main__':
     doc_block = tk.Label(pic_frame, text=doc, fg="black", justify='left', bg=bg_color)
     doc_block.pack(side="right", fill='x')
 
-    # Name row
+    # Name rows
     name_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     name_frame.pack(fill='x')
-    folder_butt = myButton(name_frame, text=folder.get(), command=enter_folder, fg="blue", bg=bg_color)
-    slash = tk.Label(name_frame, text="/", fg="blue", bg=bg_color)
-    title_butt = myButton(name_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
-    destination_folder_butt = myButton(name_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
-    destination_label = tk.Label(name_frame, text="Destination =", bg=bg_color)
     working_label = tk.Label(name_frame, text="Working folder=", bg=bg_color)
-    title_butt.pack(side="right", fill='x')
-    slash.pack(side="right", fill='x')
-    destination_folder_butt.pack(side="right", fill='x')
-    destination_label.pack(side="right", fill='x')
+    folder_butt = myButton(name_frame, text=folder.get(), command=enter_folder, fg="blue", bg=bg_color)
     working_label.pack(side='left', fill='x')
     folder_butt.pack(side="left", fill='x')
+    dest_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
+    dest_frame.pack(fill='x')
+    destination_label = tk.Label(dest_frame, text="Destination =", bg=bg_color)
+    destination_folder_butt = myButton(dest_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
+    slash = tk.Label(dest_frame, text="/", fg="blue", bg=bg_color)
+    title_butt = myButton(dest_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
+    destination_label.pack(side="left", fill='x')
+    destination_folder_butt.pack(side="left", fill='x')
+    slash.pack(side="left", fill='x')
+    title_butt.pack(side="left", fill='x')
 
     # Recording length row
     length_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -766,7 +772,9 @@ if __name__ == '__main__':
     silent_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     silent_frame.pack(fill='x')
     silent_butt = tk.Checkbutton(silent_frame, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
+    instructions_butt = tk.Checkbutton(silent_frame, text='instructions', bg=bg_color, variable=instructions, onvalue=True, offvalue=False)
     silent_butt.pack(side="left", fill='x')
+    instructions_butt.pack(side="left", fill='x')
 
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -794,6 +802,8 @@ if __name__ == '__main__':
     destination_path.trace_add('write', handle_destination_path)
     handle_silent()
     silent.trace_add('write', handle_silent)
+    handle_instructions()
+    instructions.trace_add('write', handle_instructions)
     handle_new_result_ready()
     new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
