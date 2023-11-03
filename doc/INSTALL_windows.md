@@ -5,7 +5,7 @@
 
 Synopsis:  Download this repository.   Put it in Documents/GitHub folder.
 Download and install ffmpeg.   Download and install python3.10.10.  Use 'pip' and 'pip3' from
-'python3.10' to install dependencies 'configparser' and 'openai-whisper' respectively.  The paths will get set automatically to point 'python' at 'python3.10'.
+'python3.10' to install dependencies.  The paths will get set automatically to point 'python' at 'python3.10'.
 Start Google Drive if installed.  Then run 'GUI_screencast.py' using 'python'
 
 Be sure that your user account name has no spaces before starting this.   If it does, change it now.   Go to 'Control Panel - User Accounts - Change the account name'
@@ -65,10 +65,8 @@ Open a non-administrative PowerShell, Terminal (Win 11), or Cmd and run the foll
 ```commandline
 python -m pip install --upgrade pip
 python -m pip install configparser
-python -m pip install openai-whisper --default-timeout=1000
 python -m pip install pydub
 python -m pip install pvrecorder
-python -m pip install pyaudio
 python -m pip install ttwidgets
 ```
 

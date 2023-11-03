@@ -168,9 +168,9 @@ def check_install_python(platform, verbose=False):
         if result == -1 or ver_no < 3 or rel_no < 6:
             print(Colors.fg.red, 'failed')
             if ver_no < 3:
-                print("System '", test_cmd_python, "' command points to version<3.  whisper needs 3", Colors.reset)
+                print("System '", test_cmd_python, "' command points to version<3.  myPyScreencast needs 3", Colors.reset)
             if rel_no < 6:
-                print("System '", test_cmd_python, "' command points to release<6.  whisper needs >=6", Colors.reset)
+                print("System '", test_cmd_python, "' command points to release<6.  myPyScreencast needs >=6", Colors.reset)
         else:
             have_python = True
             print('success')
@@ -439,7 +439,7 @@ def screened(extension, source, result, basename):
     return screen
 
 
-# whisper help
+# myPyScreencast help
 def screencast_help(platform, have_ffmpeg, have_ffmpeg_windows):
 
     # windows

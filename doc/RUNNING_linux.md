@@ -1,4 +1,4 @@
-# Running Linux 'whisper'
+# Running Linux 'myPyScreencast'
 We're going to make this all run with a mouse click by creating a shortcut.
 
 [Back to Linux INSTALL](INSTALL_linux.md)

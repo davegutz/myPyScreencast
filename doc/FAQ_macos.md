@@ -1,10 +1,10 @@
-# FAQ for macOS whisper
+# FAQ for macOS myPyScreencast
 [Back to myPyScreencast](../README.md)
 
 ## How do I install?
 Synopsis:  Download this repository.   Put it in Documents/GitHub folder.
 Download and install ffmpeg.   Download and install python3.10.10.  Use 'pip' and 'pip3' from
-'python3.10' to install dependencies 'configparser' and 'openai-whisper' respectively.  
+'python3.10' to install dependencies.  
 Start Google Drive if installed.  Then run 'GUI_screencast.py' using 'python3.10.'
 
 Details:  [INSTALL macOS](INSTALL_macos.md).

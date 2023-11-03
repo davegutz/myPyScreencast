@@ -1,4 +1,4 @@
-# INSTALL and run for Linux 'whisper'
+# INSTALL and run for Linux 'myPyScreencast'
 [Back to Linux](FAQ_linux.md)
 
 [Back to top](../README.md)
@@ -6,7 +6,7 @@
 ## INSTALL
 Synopsis:  Download this repository.   Put it in Documents/GitHub folder.
 Download and install ffmpeg.   Download and install python3.10.10 if at least 3.10.6 is not installed.  Use 'pip' and 'pip3' from
-'python3.10' to install dependencies 'configparser', 'opengui', and 'openai-whisper' respectively.
+'python3.10' to install dependencies.
 
 Then run 'GUI_screencast.py' using 'python3.10.'
 
@@ -59,26 +59,12 @@ python3 -m pip install --upgrade pip
 
 # Continue with these dependencies
 
-pip install configparser
 python3 -m pip install pyshortcuts
-python3 -m pip install torch --no-cache-dir --default-timeout=1000  # This installs large cuda files
-pip3 install openai-whisper --default-timeout=1000  # This installs 'whisper' and 'ffmpeg'
 python3 -m pip install pydub
 python3 -m pip install pvrecorder
 python3 -m pip install ttwidgets
 . ~/.bashrc
 sudo apt install ffmpeg
-sudo apt install libsound-dev  # for ALSA
-# get portaudio at files.portaudio.com/download.html
-# extract in Downloads (extract here after right click)
-cd Downloads/
-# descend to portaudio
-./configure
-# verify 'ALSA....yes'
-make
-sudo make install
-sudo ldconfig
-python3 -m pip install pyaudio
 ```
 
 ### Running:  [here](RUNNING_linux.md)

@@ -1,4 +1,4 @@
-# Running Windows 'whisper'
+# Running Windows 'myPyScreencast'
 We're going to make this all run with a mouse click by creating a shortcut.
 
 [Back to Windows Install](INSTALL_windows.md)

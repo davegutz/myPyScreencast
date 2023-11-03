@@ -25,7 +25,7 @@ Before going there, download the source code now because it's right at the top o
 We're wrapping an existing tool (FFmpeg) that works on all platforms to make it easy for non-tech people to use.  After installation, only mouse clicks are required to enjoy using it.
 
 ## Testing
-I ran the wrapped 'whisper' tool on three different laptops I have:  a MacBook Air from 2015, a gaming HP OMEN running Windows 11 from 2022, and a tiny Lenovo running Linux from 2022.   I recorded a vignette I wrote using Audacity on the HP machine.  That package has the capability to save in any format that 'whisper' accepts and for different resolutions.  '.wav' is lossless and has very large size.   '.mp3' and '.m4a' are two common lossy formats that lose high frequency tones.  I ran a variety of down-sampled, as well as the original raw '.wav' through 'whisper' with a range of language models.   I used only English.   So, holding the recording constant, I generated a test matrix to evaluate the tools.
+I ran the wrapped 'myPyScreencast' tool on three different laptops I have:  a MacBook Air from 2015, a gaming HP OMEN running Windows 11 from 2022, and a tiny Lenovo running Linux from 2022.
 
 ## Recommendations
 1. Use the Linux and Windows versions only.  TODO: The macOS version stutters. 

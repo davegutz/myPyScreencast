@@ -5,7 +5,7 @@
 
 Synopsis:  Download this repository.   Put it in Documents/GitHub folder.
 Download and install ffmpeg-python (or ffmpeg...TBD).   Download and install python3.10.10.  Use 'pip' and 'pip3' from
-'python3.10' to install dependencies 'configparser' and 'openai-whisper' respectively.
+'python3.10' to install dependencies.
 
 Then run 'GUI_screencast.py' using 'python3.10.'
 
@@ -37,15 +37,11 @@ Open a terminal (Launchpad - terminal) and run the following as yourself no matt
 ```
 python3 -m pip install --upgrade pip
 python3 -m pip install configparser
-python3 -m pip install openai-whisper --default-timeout=1000  # Install 'whisper' and 'ffmpeg'
 python3 -m pip install ffmpeg-python
 python3 -m pip install pydub
-python3 -m pip install pvrecorder
-python3 -m pip install pyaudio
 python3 -m pip install ttwidgets
 python3 certifi_glob.py  # Install certificates
 brew install ffmpeg
-brew install portaudio
 ```
 
 ### Running:  [here](RUNNING_macos.md)

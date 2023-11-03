@@ -1,4 +1,4 @@
-# FAQ for windows whisper
+# FAQ for windows myPyScreencast
 [Back to myPyScreencast](../README.md)
 
 ## How do I install?

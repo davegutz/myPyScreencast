@@ -1,4 +1,4 @@
-#  Prototype cli interface that feeds .wav file to whisper and transcribes it to .pdf
+#  Prototype cli interface that feeds .wav file to myPyScreencast and transcribes it to .pdf
 #  Run in PyCharm
 #     or
 #  'python3 GUI_screencast.py
