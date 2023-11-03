@@ -144,7 +144,6 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 def length_of(input_file: str, silent=True, save_stdout=True):
 
     # String together the ffmpeg command
-    print("type(input_file)=", type(input_file))
     command = 'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{:s}"'.format(input_file)
     if silent is False:
         print(command + '\n')
