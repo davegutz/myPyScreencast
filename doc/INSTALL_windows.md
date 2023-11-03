@@ -10,8 +10,8 @@ Start Google Drive if installed.  Then run 'GUI_screencast.py' using 'python'
 
 Be sure that your user account name has no spaces before starting this.   If it does, change it now.   Go to 'Control Panel - User Accounts - Change the account name'
 
-## Download the repository [myWhisper](http://www.github.com/davegutz/myWhisper)
-For most people it's easiest to click on the green '<> Code' box and download the '.zip' file.  Extract to Documents/GitHub.  Make that folder if you need to.  When done, there will be a folder similar to 'myWhisper-beta' where 'main' refers to the Current Branch in GitHub.  Install and use [NanaZip](https://apps.microsoft.com/store/detail/nanazip/9N8G7TSCL18R?hl=en-us&gl=us&rtc=1)
+## Download the repository [myPyScreencast](http://www.github.com/davegutz/myPyScreencast)
+For most people it's easiest to click on the green '<> Code' box and download the '.zip' file.  Extract to Documents/GitHub.  Make that folder if you need to.  Install and use [NanaZip](https://apps.microsoft.com/store/detail/nanazip/9N8G7TSCL18R?hl=en-us&gl=us&rtc=1)
 
 If you're so inclined, use the GitHub desktop app to perform this download.  If you don't know what I'm talking about, use the method above.
 
