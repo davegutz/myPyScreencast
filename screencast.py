@@ -1,7 +1,7 @@
 #  Prototype cli interface that feeds .wav file to whisper and transcribes it to .pdf
 #  Run in PyCharm
 #     or
-#  'python3 whisper_to_write.py
+#  'python3 GUI_screencast.py
 #
 #  2023-Apr-29  Dave Gutz   Create
 # Copyright (C) 2023 Dave Gutz and Sarah E. Gutz

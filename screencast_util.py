@@ -21,7 +21,7 @@ import subprocess
 import configparser
 import pkg_resources
 from Colors import Colors
-# from mbox import MessageBox
+from mbox import MessageBox
 from typing import Callable, TextIO
 # import vlc  # python-vlc
 
@@ -285,7 +285,7 @@ def python_help(platform):
             python -m pip install --upgrade pip
             python -m pip install configparser
             python -m pip install ffmpeg-python
-            python whisper_to_write.py
+            python GUI_screencast.py
             """), Colors.reset, sep=os.linesep)
     # macOS
     if platform == 'Darwin':
