@@ -20,8 +20,6 @@ Before going there, download the source code now because it's right at the top o
 
 ## Approach
 
-![Approach]
-
 We're wrapping an existing tool (FFmpeg) that works on all platforms to make it easy for non-tech people to use.  After installation, only mouse clicks are required to enjoy using it.
 
 ## Testing

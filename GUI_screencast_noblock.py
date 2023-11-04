@@ -18,7 +18,7 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
 from configparser import ConfigParser
 from datetime import timedelta
 from tkinter import filedialog
@@ -99,6 +99,17 @@ def size_of(path):
         return size
     else:
         return 0
+
+
+def center_killer(width=300, height=200):
+    # get screen width and height
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # calculate position x and y coordinates
+    x = (screen_width/2) - (width/2)
+    y = (screen_height/2) - (height/2)
+    killer.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 
 def clip_cut():
@@ -277,6 +288,11 @@ def handle_silent(*args):
     cf.save_to_file()
 
 
+def kill():
+    kill_ffmpeg(SYS)
+    killer.withdraw()
+
+
 def open_tuner_window():
     tuner_window = tk.Toplevel(root, bg=bg_color)
     tuner_window.title("Tuner")
@@ -442,7 +458,9 @@ def start_countdown():
         counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
         thread.start()
-        record()  # this blocks
+        killer.lift()
+        center_killer()
+        record()  # this blocks.  'killer' is used to end early
 
 
 def stay_awake(up_set_min=3.):
@@ -648,6 +666,8 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
+    killer = tk.Tk()
+    killer.attributes('-topmost', True)
     countdown_time = tk.IntVar(root, 8)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
@@ -804,6 +824,8 @@ if __name__ == '__main__':
     tuner_window_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
+    kill_button = myButton(killer, text="STOP", command=kill, bg='red')
+    kill_button.pack()
 
     # Begin
     handle_raw_path()
@@ -817,5 +839,8 @@ if __name__ == '__main__':
     handle_new_result_ready()
     new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
+    killer.mainloop()
+    center_killer()
+    killer.withdraw()
     counter.mainloop()
     counter.withdraw()

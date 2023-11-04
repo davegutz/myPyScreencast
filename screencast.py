@@ -167,12 +167,36 @@ def length_of(input_file: str, silent=True, save_stdout=True):
     return record_time
 
 
-# Wrap the ffmpeg program to make it useful and more portable
+def kill_ffmpeg(sys=None, silent=True):
+    command = ''
+    if sys == 'Linux':
+        print(f"TODO")
+    elif sys == 'Windows':
+        command = 'taskkill /f /im ffmpeg.exe'
+    elif sys == 'Darwin':
+        print(f"TODO")
+    else:
+        print(f"kill_ffmpeg: SYS = {sys} unknown")
+    if silent is False:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(command, silent=silent)
+        print(Colors.reset)
+        print(command + '\n')
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return None, False
+    else:
+        result = run_shell_cmd(command, silent=silent)
+    return result
+
+
 def screencast(waiting=False, silent=True, conversation=False,
                video_grabber="gdigrab", video_in='desktop',
                audio_grabber="dshow", audio_in="CABLE Output (VB-Audio Virtual Cable)",
                output_file=None,
                crf=28, rec_time=None):
+    """Wrap the ffmpeg program to make it useful and more portable"""
 
     print(f"{waiting=} {silent=} {conversation=} {video_grabber=} {video_in=} \
 {audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=}")
