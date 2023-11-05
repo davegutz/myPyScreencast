@@ -1,4 +1,4 @@
-#  Graphical interface to screencast recorder
+#  Graphical interface to screencast R
 #  Run in PyCharm
 #     or
 #  'python3 GUI_screencast.py
@@ -18,7 +18,7 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
 from configparser import ConfigParser
 from datetime import timedelta
 from tkinter import filedialog
@@ -89,23 +89,243 @@ class Global:
         self.clip_cut_butt = myButton(owner)
 
 
+class MyRecorder:
+    def __init__(self, sys, video_grab_, video_in_, audio_grab_, audio_in_,
+                 cwd_path_, title_, folder_, destination_folder_):
+        self.sys = sys
+        self.video_grab = video_grab_
+        self.video_in = video_in_
+        self.audio_grab = audio_grab_
+        self.audio_in = audio_in_
+        self.cwd_path = cwd_path_
+        self.title = title_
+        self.folder = folder_
+        self.destination_folder = destination_folder_
+        self.out_file = None
+        self.raw_file = None
+        self.raw_path = tk.StringVar(root, '')
+        self.raw_path_label = tk.Label(root, text='', bg=bg_color, fg='black')
+        self.out_file = None
+        self.out_path = None
+        self.target_path = tk.StringVar(root, '')
+        self.new_result_ready = tk.BooleanVar(root)
+        self.running = None
+        self.thd_num = -1
+        self.thread = []
+        self.cast_button = None
+        self.stop_button = None
+        self.video_grab_butt = myButton()
+        self.video_in_butt = myButton()
+        self.audio_grab_butt = myButton()
+        self.audio_in_butt = myButton()
+        self.title_butt = myButton()
+        self.folder_butt = myButton()
+        self.destination_folder_butt = myButton()
+        self.run_perm = False
+
+    def enter_audio_grab(self):
+        self.audio_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
+                                                    initialvalue=self.audio_grab)
+        cf[SYS]['audio_grab'] = self.audio_grab
+        cf.save_to_file()
+        self.audio_grab_butt.config(text=self.audio_grab)
+
+    def enter_audio_in(self):
+        self.audio_in = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter",
+                                                  initialvalue=self.audio_in)
+        cf[SYS]['audio_in'] = self.audio_in
+        cf.save_to_file()
+        self.audio_in_butt.config(text=self.audio_in)
+
+    def enter_destination_folder(self):
+        answer = tk.filedialog.askdirectory(title="Select a destination (i.e. Library) folder",
+                                            initialdir=self.destination_folder)
+        if answer is not None and answer != '':
+            self.destination_folder = answer
+        cf[SYS]['destination_folder'] = self.destination_folder
+        cf.save_to_file()
+        self.destination_folder_butt.config(text=self.destination_folder)
+        self.update_file_paths()
+
+    def enter_folder(self):
+        answer = tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=self.folder)
+        if answer is not None and answer != '':
+            self.folder = answer
+        cf[SYS]['folder'] = self.folder
+        cf.save_to_file()
+        self.folder_butt.config(text=self.folder)
+        self.update_file_paths()
+
+    def enter_title(self):
+        answer = tk.simpledialog.askstring(title=__file__, prompt="enter title", initialvalue=self.title)
+        if answer is not None:
+            self.title = answer
+        if self.title == '':
+            self.title = '<enter title>'
+        cf[SYS]['title'] = self.title
+        cf.save_to_file()
+        self.title_butt.config(text=self.title)
+        self.update_file_paths()
+
+    def enter_video_grab(self):
+        self.video_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter",
+                                                    initialvalue=self.video_grab)
+        cf[SYS]['video_grab'] = self.video_grab
+        cf.save_to_file()
+        self.video_grab_butt.config(text=self.video_grab)
+
+    def enter_video_in(self):
+        self.video_in = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter",
+                                                  initialvalue=self.video_in)
+        cf[SYS]['video_in'] = self.video_in
+        cf.save_to_file()
+        self.video_in_butt.config(text=self.video_in)
+
+    def record(self):
+        if self.running is True:
+            print('already recording')
+        else:
+            self.thd_num += 1
+            self.thread.append(FFmpegThread(silent.get(), self.thd_num))
+            print('starting thread', self.thd_num, end='...')
+            self.thread[self.thd_num].start()
+            self.running = True
+            print('started casting', self.raw_path.get())
+
+    def kill(self):
+        if self.running is not None:
+            kill_ffmpeg(SYS)
+            self.cast_button.config(bg="red", fg='black')
+            self.stop_button.config(bg=bg_color, fg=bg_color)
+            self.running = False
+            print('Stopped recording; output in ', self.raw_path.get())
+        else:
+            print('R was not running')
+        if self.run_perm is True:
+            self.run_perm = False
+            self.cast_button.config(bg="red", fg='black')
+            self.stop_button.config(bg=bg_color, fg=bg_color)
+            print('start permission cancelled')
+
+    def update_file_paths(self):
+        """Use 'title' and 'folder' to set paths of all files used"""
+        self.out_file = self.title + '.mkv'
+        self.out_path = os.path.join(self.folder, self.out_file)
+        self.new_result_ready.set(size_of(self.out_path) > 0)
+        new_target_path = os.path.join(self.destination_folder, self.out_file)
+        if new_target_path != self.target_path.get():
+            self.target_path.set(new_target_path)  # Trip the trace only on actual change
+        self.raw_file = self.title + '_raw.mkv'
+        self.raw_path.set(os.path.join(self.folder, self.raw_file))
+
+        # paint
+        if self.title == '' or self.title == '<enter title>':
+            paint(self.title_butt, bg='pink')
+        else:
+            paint(self.title_butt, bg=bg_color)
+        if os.path.exists(self.folder):
+            paint(self.folder_butt, bg='lightgreen')
+        else:
+            paint(self.folder_butt, bg='pink')
+        if size_of(self.target_path.get()) > 0:
+            paint(self.title_butt, bg='yellow')
+        else:
+            paint(self.title_butt, bg=bg_color)
+        if os.path.exists(self.destination_folder):
+            paint(self.destination_folder_butt, bg='lightgreen')
+        else:
+            paint(self.destination_folder_butt, bg='pink')
+
+
+class FFmpegThread(Thread):
+    """Wrap thread class so can extract resulting filename"""
+    def __init__(self, silent_, eyed):
+        Thread.__init__(self)
+        self.silent = silent_
+        self.result_path = None
+        self.id = eyed
+
+    def run(self):
+        """Start screencast thread.  The 'send_message' separate thread is self terminating."""
+        if R.title == '<enter title>' or R.title == '' or R.title == 'None':
+            R.enter_title()
+        if R.title != '<enter title>' and R.title != '' and R.title != 'None':
+            thread_active.set(thread_active.get()+1)
+            print('sending message')
+            thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': 'Starting ' + str(rec_time.get())})
+            thread.start()
+            rf, rr = screencast(silent=silent.get(),
+                                video_grabber=R.video_grab, video_in=R.video_in,
+                                audio_grabber=R.audio_grab, audio_in=R.audio_in,
+                                crf=crf.get(),
+                                rec_time=rec_time.get()*60.,
+                                output_file=R.raw_path.get())
+            if rf is not None and rr is True:
+                R.raw_path.set(rf)  # screencast may cause null filename if fails
+                R.new_result_ready.set(rr)
+                sync()
+                shutil.move(R.out_path, R.target_path.get())
+            if size_of(R.target_path.get()) > 0:
+                root.lift()
+                print('sending message')
+                print("record:  R.target_path.get()=", R.target_path.get(), " type =", type(R.target_path.get()))
+                if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
+                    msg = 'target ready'
+                else:
+                    print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
+                    msg = 'Done but >1 min size difference'
+                thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
+                thread.start()
+                pyautogui.press('F5')  # Attempt to exit fullscreen
+                tk.messagebox.showinfo(title='Screencast', message=msg)
+                update_all_file_paths()
+            else:
+                print('aborting recording....need to enter title.  Presently = ', R.title)
+            thread_active.set(thread_active.get()-1)
+
+
 # Global methods
 def add_to_clip_board(text):
     pyperclip.copy(text)
 
 
-def size_of(path):
-    if os.path.isfile(path) and (size := os.path.getsize(path)) > 0:  # bytes
-        return size
+def cast():
+    """After 'pushing the button' check if over-writing then start countdown"""
+    if size_of(R.target_path.get()) > 0:  # bytes
+        confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
+        if confirmation is False:
+            print('enter different folder or title first row')
+            tk.messagebox.showwarning(message='enter different folder or title first row')
+            return
+    R.cast_button.config(bg=bg_color)
+    R.stop_button.config(bg="black", fg="white")
+    R.run_perm = True
+    cast_countdown()
+
+
+def cast_countdown():
+    """Countdown then call record()"""
+    if R.run_perm is False:
+        return
+    msg = 'Counting down'
+    print(f"countdown {countdown_time.get()=}")
+    countdown_time.set(countdown_time.get() - 1)
+    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
+    if countdown_time.get() > 0:
+        counter.lift()
+        root.after(1000, cast_countdown)
     else:
-        return 0
+        counter.withdraw()
+        thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
+        thread.start()
+        R.record()  # this blocks.  'STOP' is used to end early
 
 
 def clip_cut():
-    cut_clip(silent=silent.get(), raw_file=raw_path.get(),
+    cut_clip(silent=silent.get(), raw_file=R.raw_path.get(),
              start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
              clip_file=clip_path.get())
-    update_file_paths()
+    update_all_file_paths()
 
 
 def contain_all(testpath):
@@ -127,45 +347,11 @@ def create_file_txt(option_, unit_, battery_):
     return option_ + '_' + unit_ + '_' + battery_ + '.csv'
 
 
-def enter_audio_grab():
-    audio_grab.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter", initialvalue=audio_grab.get()))
-    cf[SYS]['audio_grab'] = audio_grab.get()
-    cf.save_to_file()
-    audio_grab_butt.config(text=audio_grab.get())
-
-
-def enter_audio_in():
-    audio_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter", initialvalue=audio_in.get()))
-    cf[SYS]['audio_in'] = audio_in.get()
-    cf.save_to_file()
-    audio_in_butt.config(text=audio_in.get())
-
-
 def enter_crf():
     crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file", initialvalue=crf.get()))
     cf[SYS]['crf'] = str(crf.get())
     cf.save_to_file()
     crf_butt.config(text=crf.get())
-
-
-def enter_destination_folder():
-    answer = tk.filedialog.askdirectory(title="Select a destination (i.e. Library) folder", initialdir=destination_folder.get())
-    if answer is not None and answer != '':
-        destination_folder.set(answer)
-    cf[SYS]['destination_folder'] = destination_folder.get()
-    cf.save_to_file()
-    destination_folder_butt.config(text=destination_folder.get())
-    update_file_paths()
-
-
-def enter_folder():
-    answer = tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=folder.get())
-    if answer is not None and answer != '':
-        folder.set(answer)
-    cf[SYS]['folder'] = folder.get()
-    cf.save_to_file()
-    folder_butt.config(text=folder.get())
-    update_file_paths()
 
 
 def enter_rec_time():
@@ -185,18 +371,6 @@ def enter_stop_clip_time():
     tuners.stop_clip_butt.config(text=stop_clip.get())
 
 
-def enter_title():
-    answer = tk.simpledialog.askstring(title=__file__, prompt="enter title", initialvalue=title.get())
-    if answer is not None:
-        title.set(answer)
-    if title.get() == '':
-        title.set('<enter title>')
-    cf[SYS]['title'] = title.get()
-    cf.save_to_file()
-    title_butt.config(text=title.get())
-    update_file_paths()
-
-
 def enter_video_delay():
     video_delay.set(float(tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-", initialvalue=video_delay.get())))
     cf[SYS]['video_delay'] = str(video_delay.get())
@@ -205,26 +379,12 @@ def enter_video_delay():
     tuners.video_delay_tuner_butt.config(text=str(video_delay.get()))
 
 
-def enter_video_grab():
-    video_grab.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter", initialvalue=video_grab.get()))
-    cf[SYS]['video_grab'] = video_grab.get()
-    cf.save_to_file()
-    video_grab_butt.config(text=video_grab.get())
-
-
-def enter_video_in():
-    video_in.set(tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter", initialvalue=video_in.get()))
-    cf[SYS]['video_in'] = video_in.get()
-    cf.save_to_file()
-    video_in_butt.config(text=video_in.get())
-
-
 def handle_target_path(*args):
-    new_result_ready.set(False)
-    if size_of(target_path.get()) > 0:  # bytes
+    R.new_result_ready.set(False)
+    if size_of(R.target_path.get()) > 0:  # bytes
         tk.messagebox.showwarning(message='target file exists')
-    if size_of(raw_path.get()) > 0:  # bytes
-        record_time = length_of(raw_path.get(), silent=silent.get())
+    if size_of(R.raw_path.get()) > 0:  # bytes
+        record_time = length_of(R.raw_path.get(), silent=silent.get())
         if record_time is not None:
             raw_time.set(record_time / 60.)
         else:
@@ -235,18 +395,19 @@ def handle_target_path(*args):
     hms_label.config(text=hms.get())
     tuners.hms_label.config(text=hms.get())
     cf.save_to_file()
-    update_file_paths()
+    update_all_file_paths()
 
 
 def handle_raw_path(*args):
-    update_file_paths()
+    update_all_file_paths()
 
 
 def handle_new_result_ready(*args):
-    if size_of(out_path.get()) > 0:  # bytes
-        if new_result_ready.get():
-            paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
-            record_time = length_of(raw_path.get(), silent=silent.get())
+    if size_of(R.out_path) > 0:  # bytes
+        if R.new_result_ready.get():
+            paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
+            paint(R.stop_button, bg=bg_color, fg=bg_color)
+            record_time = length_of(R.raw_path.get(), silent=silent.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
             else:
@@ -255,12 +416,13 @@ def handle_new_result_ready(*args):
             hms_label.config(text=hms.get())
             tuners.hms_label.config(text=hms.get())
         else:
-            paint(record_butt, bg='red', activebackground='red', fg='white', activeforeground='purple')
+            paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
+            paint(R.stop_button, bg=bg_color, fg=bg_color)
 
 
 def handle_clip_path(*args):
     """Tuner window"""
-    update_file_paths()
+    update_all_file_paths()
 
 
 def handle_instructions(*args):
@@ -306,7 +468,7 @@ def open_tuner_window():
     raw_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_frame.pack(fill='x')
     raw_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
-    tuners.raw_path_label = tk.Label(raw_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.raw_path_label = tk.Label(raw_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.raw_path_label.config(bg=bg_color)
     raw_label.pack(side="left", fill='x')
     tuners.raw_path_label.pack(side="left", fill='x')
@@ -338,7 +500,7 @@ def open_tuner_window():
     sync_frame.pack(side=tk.TOP)
     tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=sync, bg='red', fg='white')
     sync_label = tk.Label(sync_frame, text="Sync =", bg=bg_color)
-    tuners.out_path_label = tk.Label(sync_frame, text=out_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.out_path_label = tk.Label(sync_frame, text=R.out_file, wraplength=wrap_length, justify=tk.RIGHT)
     tuners.out_path_label.config(bg=bg_color)
     tuners.sync_tuner_butt.pack(side="left", fill='x')
     sync_label.pack(side="left", fill='x')
@@ -367,41 +529,6 @@ def paint(tk_object, bg='lightgray', fg='black', activebackground=None, activefo
     tk_object.config(bg=bg, activebackground=activebackground, fg=fg, activeforeground=activeforeground)
 
 
-def record():
-    if title.get() == '<enter title>' or title.get() == '' or title.get() == 'None':
-        enter_title()
-    if title.get() != '<enter title>' and title.get() != '' and title.get() != 'None':
-        print('sending message')
-        thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': 'Starting ' + str(rec_time.get())})
-        thread.start()
-        rf, rr = screencast(silent=silent.get(),
-                            video_grabber=video_grab.get(), video_in=video_in.get(),
-                            audio_grabber=audio_grab.get(), audio_in=audio_in.get(),
-                            crf=crf.get(),
-                            rec_time=rec_time.get()*60.,
-                            output_file=raw_path.get())
-        raw_path.set(rf)  # screencast may cause null filename if fails
-        new_result_ready.set(rr)
-        sync()
-        shutil.move(out_path.get(), target_path.get())
-        if size_of(target_path.get()) > 0:
-            root.lift()
-            print('sending message')
-            print("record:  target_path.get()=", target_path.get(), " type =", type(target_path.get()))
-            if abs(length_of(target_path.get()) - rec_time.get()) < 1:
-                msg = 'target ready'
-            else:
-                print(f"record:  actual {length_of(target_path.get())} != demand {rec_time.get()}")
-                msg = 'Done but >1 min size difference'
-            thread = Thread(target=send_message, kwargs={'subject': title.get(), 'message': msg})
-            thread.start()
-            pyautogui.press('F5')  # Attempt to exit fullscreen
-            tk.messagebox.showinfo(title='Screencast', message=msg)
-            update_file_paths()
-        else:
-            print('aborting recording....need to enter title.  Presently = ', title.get())
-
-
 def send_message(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
     try:
@@ -418,31 +545,11 @@ def send_message(email=my_email, password=my_app_password, to=my_text, subject='
         print("send_message failed:", e)
 
 
-def start():
-    """After 'pushing the button' check if over-writing then start countdown"""
-    if size_of(target_path.get()) > 0:  # bytes
-        confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
-        if confirmation is False:
-            print('enter different folder or title first row')
-            tk.messagebox.showwarning(message='enter different folder or title first row')
-            return
-    start_countdown()
-
-
-def start_countdown():
-    """Countdown then call record()"""
-    msg = 'Counting down'
-    print(f"countdown {countdown_time.get()=}")
-    countdown_time.set(countdown_time.get() - 1)
-    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
-    if countdown_time.get() > 0:
-        counter.lift()
-        root.after(1000, start_countdown)
+def size_of(path):
+    if os.path.isfile(path) and (size := os.path.getsize(path)) > 0:  # bytes
+        return size
     else:
-        counter.withdraw()
-        thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
-        thread.start()
-        record()  # this blocks
+        return 0
 
 
 def stay_awake(up_set_min=3.):
@@ -465,14 +572,14 @@ def stay_awake(up_set_min=3.):
         
         
 def sync():
-    if size_of(raw_path.get()) > 0:
+    if size_of(R.raw_path.get()) > 0:
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_path.get(),
-                             output_file=out_path.get())
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=R.raw_path.get(),
+                             output_file=R.out_path)
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
-                             output_file=out_path.get())
-        update_file_paths()
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
+                             output_file=R.out_path)
+        update_all_file_paths()
     else:
         print("record first *******")
 
@@ -485,44 +592,22 @@ def sync_clip():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_clip_path.get(),
                              output_file=os.path.join(os.getcwd(), clip_path.get()))
-        update_file_paths()
+        update_all_file_paths()
     else:
         print("record first *******")
 
 
-def update_file_paths():
+def update_all_file_paths():
     """Use 'title' and 'folder' to set paths of all files used"""
-    if title.get() == '' or title.get() == '<enter title>':
-        paint(title_butt, bg='pink')
-    else:
-        paint(title_butt, bg=bg_color)
-    out_file.set(title.get()+'.mkv')
-    if os.path.exists(folder.get()):
-        paint(folder_butt, bg='lightgreen')
-    else:
-        paint(folder_butt, bg='pink')
-    out_path.set(os.path.join(folder.get(), out_file.get()))
-    new_target_path = os.path.join(destination_folder.get(), out_file.get())
-    if new_target_path != target_path.get():
-        target_path.set(new_target_path)
-    if size_of(target_path.get()) > 0:
-        paint(title_butt, bg='yellow')
-    else:
-        paint(title_butt, bg=bg_color)
-    if os.path.exists(destination_folder.get()):
-        paint(destination_folder_butt, bg='lightgreen')
-    else:
-        paint(destination_folder_butt, bg='pink')
-    raw_file.set(title.get() + '_raw.mkv')
-    raw_path.set(os.path.join(folder.get(), raw_file.get()))
-    if size_of(raw_path.get()) > 0:
-        paint(raw_path_label, bg='yellow')
+    R.update_file_paths()
+    if size_of(R.raw_path.get()) > 0:
+        paint(R.raw_path_label, bg='yellow')
         paint(tuners.raw_path_label, bg='yellow')
     else:
-        paint(raw_path_label, bg=bg_color)
+        paint(R.raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
-    raw_clip_file.set(title.get() + '_clip_raw.mkv')
-    raw_clip_path.set(os.path.join(folder.get(), raw_clip_file.get()))
+    raw_clip_file.set(R.title + '_clip_raw.mkv')
+    raw_clip_path.set(os.path.join(R.folder, raw_clip_file.get()))
     if size_of(raw_clip_path.get()) > 0:
         paint(tuners.raw_clip_file_label, bg='yellow')
     else:
@@ -531,8 +616,8 @@ def update_file_paths():
         paint(tuners.clip_path_label, bg='yellow')
     else:
         paint(tuners.clip_path_label, bg=bg_color)
-    clip_file.set(title.get() + '_clip.mkv')
-    clip_path.set(os.path.join(folder.get(), clip_file.get()))
+    clip_file.set(R.title + '_clip.mkv')
+    clip_path.set(os.path.join(R.folder, clip_file.get()))
 
 
 if __name__ == '__main__':
@@ -649,18 +734,12 @@ if __name__ == '__main__':
     counter = tk.Tk()
     counter.attributes('-topmost', True)
     countdown_time = tk.IntVar(root, 8)
+    thread_active = tk.IntVar(root, 8)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
-    folder = tk.StringVar(root, cf[SYS]['folder'])
-    destination_folder = tk.StringVar(root, cf[SYS]['destination_folder'])
-    title = tk.StringVar(root, cf[SYS]['title'])
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
-    video_grab = tk.StringVar(root, cf[SYS]['video_grab'])
-    video_in = tk.StringVar(root, cf[SYS]['video_in'])
-    audio_grab = tk.StringVar(root, cf[SYS]['audio_grab'])
-    audio_in = tk.StringVar(root, cf[SYS]['audio_in'])
     video_delay = tk.DoubleVar(root, float(cf[SYS]['video_delay']))
     if cf[SYS]['silent'] == 'False':
         silent = tk.BooleanVar(root, False)
@@ -673,25 +752,17 @@ if __name__ == '__main__':
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
-    out_file = tk.StringVar(root)
-    out_path = tk.StringVar(root)
-    target_path = tk.StringVar(root)
-    raw_file = tk.StringVar(root)
-    raw_path = tk.StringVar(root)
     raw_clip_file = tk.StringVar(root)
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
+    R = MyRecorder(SYS, cf[SYS]['video_grab'], cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
+                   cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'])
 
-    # Pre-define so update_file_paths() works
-    title_butt = myButton()
-    folder_butt = myButton()
-    raw_path_label = tk.Label()
-    destination_folder_butt = myButton()
-    update_file_paths()
+    # Pre-define so update_all_file_paths() works
+    update_all_file_paths()
 
     # raw_path = tk.StringVar(root, raw_path.get())
-    new_result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
     start_clip = tk.DoubleVar(root, 0.0)
     stop_clip = tk.DoubleVar(root, 0.0)
     clip_path = tk.StringVar(root, clip_path.get())
@@ -717,19 +788,19 @@ if __name__ == '__main__':
     name_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     name_frame.pack(fill='x')
     working_label = tk.Label(name_frame, text="Working folder=", bg=bg_color)
-    folder_butt = myButton(name_frame, text=folder.get(), command=enter_folder, fg="blue", bg=bg_color)
+    R.folder_butt = myButton(name_frame, text=R.folder, command=R.enter_folder, fg="blue", bg=bg_color)
     working_label.pack(side='left', fill='x')
-    folder_butt.pack(side="left", fill='x')
+    R.folder_butt.pack(side="left", fill='x')
     target_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     target_frame.pack(fill='x')
     destination_label = tk.Label(target_frame, text="Target =", bg=bg_color)
-    destination_folder_butt = myButton(target_frame, text=destination_folder.get(), command=enter_destination_folder, fg="blue", bg=bg_color)
+    R.destination_folder_butt = myButton(target_frame, text=R.destination_folder, command=R.enter_destination_folder, fg="blue", bg=bg_color)
     slash = tk.Label(target_frame, text="/", fg="blue", bg=bg_color)
-    title_butt = myButton(target_frame, text=title.get(), command=enter_title, fg="blue", bg=bg_color)
+    R.title_butt = myButton(target_frame, text=R.title, command=R.enter_title, fg="blue", bg=bg_color)
     destination_label.pack(side="left", fill='x')
-    destination_folder_butt.pack(side="left", fill='x')
+    R.destination_folder_butt.pack(side="left", fill='x')
     slash.pack(side="left", fill='x')
-    title_butt.pack(side="left", fill='x')
+    R.title_butt.pack(side="left", fill='x')
 
     # Recording length row
     length_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -762,21 +833,21 @@ if __name__ == '__main__':
     video_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     video_frame.pack(fill='x')
     video_grab_label = tk.Label(video_frame, text="Video:", bg=bg_color)
-    video_grab_butt = myButton(video_frame, text=video_grab.get(), command=enter_video_grab, fg="purple", bg=bg_color)
-    video_in_butt = myButton(video_frame, text=video_in.get(), command=enter_video_in, fg="purple", bg=bg_color)
+    R.video_grab_butt = myButton(video_frame, text=R.video_grab, command=R.enter_video_grab, fg="purple", bg=bg_color)
+    R.video_in_butt = myButton(video_frame, text=R.video_in, command=R.enter_video_in, fg="purple", bg=bg_color)
     video_grab_label.pack(side="left", fill='x')
-    video_grab_butt.pack(side="left", fill='x')
-    video_in_butt.pack(side="left", fill='x')
+    R.video_grab_butt.pack(side="left", fill='x')
+    R.video_in_butt.pack(side="left", fill='x')
 
     # Audio row
     audio_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     audio_frame.pack(fill='x')
     audio_grab_label = tk.Label(audio_frame, text="Audio:", bg=bg_color)
-    audio_grab_butt = myButton(audio_frame, text=audio_grab.get(), command=enter_audio_grab, fg="purple", bg=bg_color)
-    audio_in_butt = myButton(audio_frame, text=audio_in.get(), command=enter_audio_in, fg="purple", bg=bg_color)
+    R.audio_grab_butt = myButton(audio_frame, text=R.audio_grab, command=R.enter_audio_grab, fg="purple", bg=bg_color)
+    R.audio_in_butt = myButton(audio_frame, text=R.audio_in, command=R.enter_audio_in, fg="purple", bg=bg_color)
     audio_grab_label.pack(side="left", fill='x')
-    audio_grab_butt.pack(side="left", fill='x')
-    audio_in_butt.pack(side="left", fill='x')
+    R.audio_grab_butt.pack(side="left", fill='x')
+    R.audio_in_butt.pack(side="left", fill='x')
 
     # Silent row
     silent_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -789,33 +860,36 @@ if __name__ == '__main__':
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    raw_path_label = tk.Label(action_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
-    raw_path_label.pack(side="right", fill='x')
+    R.raw_path_label = tk.Label(action_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
+    R.raw_path_label.pack(side="right", fill='x')
     action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
     action_label.pack(side="right", fill='x')
 
     # Record row
-    record_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
-    record_frame.pack(fill='x')
-    record_butt = myButton(record_frame, text='****    START      ****', command=start, fg='white', bg='red',
-                           wraplength=wrap_length, justify=tk.CENTER)
-    tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
-    record_butt.pack(side="left", fill='x')
+    cast_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
+    cast_frame.pack(fill='x')
+    R.cast_button = myButton(cast_frame, text='****    START      ****', command=cast, fg='white', bg='red',
+                             wraplength=wrap_length, justify=tk.CENTER)
+    R.stop_button = myButton(cast_frame, text='****   STOP EARLY  ****', command=R.kill, fg=bg_color, bg=bg_color,
+                             wraplength=wrap_length, justify=tk.CENTER)
+    tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
+    R.cast_button.pack(side="left", fill='x')
+    R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
 
     # Begin
     handle_raw_path()
-    raw_path.trace_add('write', handle_raw_path)
+    R.raw_path.trace_add('write', handle_raw_path)
     handle_target_path()
-    target_path.trace_add('write', handle_target_path)
+    R.target_path.trace_add('write', handle_target_path)
     handle_silent()
     silent.trace_add('write', handle_silent)
     handle_instructions()
     instructions.trace_add('write', handle_instructions)
     handle_new_result_ready()
-    new_result_ready.trace_add('write', handle_new_result_ready)
+    R.new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
     counter.mainloop()
     counter.withdraw()
