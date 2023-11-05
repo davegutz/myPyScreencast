@@ -174,7 +174,7 @@ def kill_ffmpeg(sys=None, silent=True):
     elif sys == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
     elif sys == 'Darwin':
-        print(f"TODO")
+        command = 'pkill ffmpeg'
     else:
         print(f"kill_ffmpeg: SYS = {sys} unknown")
     if silent is False:
