@@ -121,6 +121,7 @@ class MyRecorder:
         self.title_butt = myButton()
         self.folder_butt = myButton()
         self.destination_folder_butt = myButton()
+        self.run_perm = False
 
     def enter_audio_grab(self):
         self.audio_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
@@ -200,6 +201,11 @@ class MyRecorder:
             print('Stopped recording; output in ', self.raw_path.get())
         else:
             print('R was not running')
+        if self.run_perm is True:
+            self.run_perm = False
+            self.cast_button.config(bg="red", fg='black')
+            self.stop_button.config(bg=bg_color, fg=bg_color)
+            print('start permission cancelled')
 
     def update_file_paths(self):
         """Use 'title' and 'folder' to set paths of all files used"""
@@ -293,11 +299,14 @@ def cast():
             return
     R.cast_button.config(bg=bg_color)
     R.stop_button.config(bg="black", fg="white")
+    R.run_perm = True
     cast_countdown()
 
 
 def cast_countdown():
     """Countdown then call record()"""
+    if R.run_perm is False:
+        return
     msg = 'Counting down'
     print(f"countdown {countdown_time.get()=}")
     countdown_time.set(countdown_time.get() - 1)
