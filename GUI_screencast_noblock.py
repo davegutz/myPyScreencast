@@ -103,14 +103,15 @@ class MyRecorder:
         self.destination_folder = destination_folder_
         self.out_file = None
         self.raw_file = None
-        self.raw_path = None
+        self.raw_path = tk.StringVar(root, '')
+        self.raw_path_label = tk.Label(root, text='', bg=bg_color, fg='black')
         self.out_file = None
         self.out_path = None
         self.target_path = tk.StringVar(root, '')
+        self.new_result_ready = tk.BooleanVar(root)
         self.running = None
         self.thd_num = -1
         self.thread = []
-        self.out_path = None
         self.cast_button = None
         self.stop_button = None
         self.video_grab_butt = myButton()
@@ -188,17 +189,15 @@ class MyRecorder:
             print('starting thread', self.thd_num, end='...')
             self.thread[self.thd_num].start()
             self.running = True
-            print('started casting', self.raw_path)
-            self.cast_button.config(bg="lightgray")
-            self.stop_button.config(bg="black")
+            print('started casting', self.raw_path.get())
 
     def stop(self):
         if self.running is not None:
             kill_ffmpeg(SYS)
-            self.cast_button.config(bg="red")
-            self.stop_button.config(bg="lightgray")
+            self.cast_button.config(bg="red", fg='black')
+            self.stop_button.config(bg=bg_color, fg=bg_color)
             self.running = False
-            print('Stopped recording; output in ', self.raw_path)
+            print('Stopped recording; output in ', self.raw_path.get())
         else:
             print('R was not running')
 
@@ -206,11 +205,12 @@ class MyRecorder:
         """Use 'title' and 'folder' to set paths of all files used"""
         self.out_file = self.title + '.mkv'
         self.out_path = os.path.join(self.folder, self.out_file)
+        self.new_result_ready.set(size_of(self.out_path) > 0)
         new_target_path = os.path.join(self.destination_folder, self.out_file)
         if new_target_path != self.target_path.get():
             self.target_path.set(new_target_path)  # Trip the trace only on actual change
         self.raw_file = self.title + '_raw.mkv'
-        self.raw_path = os.path.join(self.folder, self.raw_file)
+        self.raw_path.set(os.path.join(self.folder, self.raw_file))
 
         # paint
         if self.title == '' or self.title == '<enter title>':
@@ -253,20 +253,20 @@ class FFmpegThread(Thread):
                                 audio_grabber=R.audio_grab, audio_in=R.audio_in,
                                 crf=crf.get(),
                                 rec_time=rec_time.get()*60.,
-                                output_file=raw_path.get())
+                                output_file=R.raw_path.get())
             if rf is not None and rr is True:
-                raw_path.set(rf)  # screencast may cause null filename if fails
-                new_result_ready.set(rr)
+                R.raw_path.set(rf)  # screencast may cause null filename if fails
+                R.new_result_ready.set(rr)
                 sync()
-                shutil.move(out_path.get(), target_path.get())
-            if size_of(target_path.get()) > 0:
+                shutil.move(R.out_path, R.target_path.get())
+            if size_of(R.target_path.get()) > 0:
                 root.lift()
                 print('sending message')
-                print("record:  target_path.get()=", target_path.get(), " type =", type(target_path.get()))
-                if abs(length_of(target_path.get()) - rec_time.get()) < 1:
+                print("record:  R.target_path.get()=", R.target_path.get(), " type =", type(R.target_path.get()))
+                if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
                     msg = 'target ready'
                 else:
-                    print(f"record:  actual {length_of(target_path.get())} != demand {rec_time.get()}")
+                    print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
@@ -283,11 +283,35 @@ def add_to_clip_board(text):
     pyperclip.copy(text)
 
 
-def size_of(path):
-    if os.path.isfile(path) and (size := os.path.getsize(path)) > 0:  # bytes
-        return size
+def cast():
+    """After 'pushing the button' check if over-writing then start countdown"""
+    if size_of(R.target_path.get()) > 0:  # bytes
+        confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
+        if confirmation is False:
+            print('enter different folder or title first row')
+            tk.messagebox.showwarning(message='enter different folder or title first row')
+            return
+    R.cast_button.config(bg=bg_color)
+    R.stop_button.config(bg="black", fg="white")
+    cast_countdown()
+
+
+def cast_countdown():
+    """Countdown then call record()"""
+    msg = 'Counting down'
+    print(f"countdown {countdown_time.get()=}")
+    countdown_time.set(countdown_time.get() - 1)
+    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
+    if countdown_time.get() > 0:
+        counter.lift()
+        root.after(1000, cast_countdown)
     else:
-        return 0
+        counter.withdraw()
+        thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
+        thread.start()
+        killer.lift()
+        center_killer()
+        R.record()  # this blocks.  'killer' is used to end early
 
 
 def center_killer(width=300, height=200):
@@ -302,7 +326,7 @@ def center_killer(width=300, height=200):
 
 
 def clip_cut():
-    cut_clip(silent=silent.get(), raw_file=raw_path.get(),
+    cut_clip(silent=silent.get(), raw_file=R.raw_path.get(),
              start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
              clip_file=clip_path.get())
     update_all_file_paths()
@@ -360,11 +384,11 @@ def enter_video_delay():
 
 
 def handle_target_path(*args):
-    R.new_result_ready = False
+    R.new_result_ready.set(False)
     if size_of(R.target_path.get()) > 0:  # bytes
         tk.messagebox.showwarning(message='target file exists')
-    if size_of(R.raw_path) > 0:  # bytes
-        record_time = length_of(R.raw_path, silent=silent.get())
+    if size_of(R.raw_path.get()) > 0:  # bytes
+        record_time = length_of(R.raw_path.get(), silent=silent.get())
         if record_time is not None:
             raw_time.set(record_time / 60.)
         else:
@@ -383,10 +407,10 @@ def handle_raw_path(*args):
 
 
 def handle_new_result_ready(*args):
-    if size_of(out_path.get()) > 0:  # bytes
-        if new_result_ready.get():
-            paint(record_butt, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
-            record_time = length_of(raw_path.get(), silent=silent.get())
+    if size_of(R.out_path) > 0:  # bytes
+        if R.new_result_ready.get():
+            paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
+            record_time = length_of(R.raw_path.get(), silent=silent.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
             else:
@@ -395,7 +419,7 @@ def handle_new_result_ready(*args):
             hms_label.config(text=hms.get())
             tuners.hms_label.config(text=hms.get())
         else:
-            paint(record_butt, bg='red', activebackground='red', fg='white', activeforeground='purple')
+            paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
 
 
 def handle_clip_path(*args):
@@ -451,7 +475,7 @@ def open_tuner_window():
     raw_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_frame.pack(fill='x')
     raw_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
-    tuners.raw_path_label = tk.Label(raw_frame, text=raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.raw_path_label = tk.Label(raw_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.raw_path_label.config(bg=bg_color)
     raw_label.pack(side="left", fill='x')
     tuners.raw_path_label.pack(side="left", fill='x')
@@ -528,33 +552,11 @@ def send_message(email=my_email, password=my_app_password, to=my_text, subject='
         print("send_message failed:", e)
 
 
-def start():
-    """After 'pushing the button' check if over-writing then start countdown"""
-    if size_of(target_path.get()) > 0:  # bytes
-        confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
-        if confirmation is False:
-            print('enter different folder or title first row')
-            tk.messagebox.showwarning(message='enter different folder or title first row')
-            return
-    start_countdown()
-
-
-def start_countdown():
-    """Countdown then call record()"""
-    msg = 'Counting down'
-    print(f"countdown {countdown_time.get()=}")
-    countdown_time.set(countdown_time.get() - 1)
-    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
-    if countdown_time.get() > 0:
-        counter.lift()
-        root.after(1000, start_countdown)
+def size_of(path):
+    if os.path.isfile(path) and (size := os.path.getsize(path)) > 0:  # bytes
+        return size
     else:
-        counter.withdraw()
-        thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
-        thread.start()
-        killer.lift()
-        center_killer()
-        R.record()  # this blocks.  'killer' is used to end early
+        return 0
 
 
 def stay_awake(up_set_min=3.):
@@ -577,13 +579,13 @@ def stay_awake(up_set_min=3.):
         
         
 def sync():
-    if size_of(raw_path.get()) > 0:
+    if size_of(R.raw_path.get()) > 0:
         if video_delay.get() >= 0.0:
-            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_path.get(),
-                             output_file=out_path.get())
+            delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=R.raw_path.get(),
+                             output_file=R.out_path)
         else:
-            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
-                             output_file=out_path.get())
+            delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
+                             output_file=R.out_path)
         update_all_file_paths()
     else:
         print("record first *******")
@@ -605,11 +607,11 @@ def sync_clip():
 def update_all_file_paths():
     """Use 'title' and 'folder' to set paths of all files used"""
     R.update_file_paths()
-    if size_of(raw_path.get()) > 0:
-        paint(raw_path_label, bg='yellow')
+    if size_of(R.raw_path.get()) > 0:
+        paint(R.raw_path_label, bg='yellow')
         paint(tuners.raw_path_label, bg='yellow')
     else:
-        paint(raw_path_label, bg=bg_color)
+        paint(R.raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
     raw_clip_file.set(R.title + '_clip_raw.mkv')
     raw_clip_path.set(os.path.join(R.folder, raw_clip_file.get()))
@@ -759,11 +761,6 @@ if __name__ == '__main__':
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
-    out_file = tk.StringVar(root)
-    out_path = tk.StringVar(root)
-    target_path = tk.StringVar(root)
-    raw_file = tk.StringVar(root)
-    raw_path = tk.StringVar(root)
     raw_clip_file = tk.StringVar(root)
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
@@ -772,11 +769,9 @@ if __name__ == '__main__':
                    cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'])
 
     # Pre-define so update_all_file_paths() works
-    raw_path_label = tk.Label()
     update_all_file_paths()
 
     # raw_path = tk.StringVar(root, raw_path.get())
-    new_result_ready = tk.BooleanVar(root, size_of(out_path.get()) > 0)
     start_clip = tk.DoubleVar(root, 0.0)
     stop_clip = tk.DoubleVar(root, 0.0)
     clip_path = tk.StringVar(root, clip_path.get())
@@ -874,18 +869,20 @@ if __name__ == '__main__':
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    raw_path_label = tk.Label(action_frame, text=R.raw_path, wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
-    raw_path_label.pack(side="right", fill='x')
+    R.raw_path_label = tk.Label(action_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
+    R.raw_path_label.pack(side="right", fill='x')
     action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
     action_label.pack(side="right", fill='x')
 
     # Record row
-    record_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
-    record_frame.pack(fill='x')
-    record_butt = myButton(record_frame, text='****    START      ****', command=start, fg='white', bg='red',
-                           wraplength=wrap_length, justify=tk.CENTER)
-    tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
-    record_butt.pack(side="left", fill='x')
+    cast_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
+    cast_frame.pack(fill='x')
+    R.cast_button = myButton(cast_frame, text='****    START      ****', command=cast, fg='white', bg='red',
+                             wraplength=wrap_length, justify=tk.CENTER)
+    R.stop_button = myButton(cast_frame, text='****    STOP      ****', command=cast, fg=bg_color, bg=bg_color,
+                             wraplength=wrap_length, justify=tk.CENTER)
+    tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
+    R.cast_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
@@ -894,7 +891,7 @@ if __name__ == '__main__':
 
     # Begin
     handle_raw_path()
-    raw_path.trace_add('write', handle_raw_path)
+    R.raw_path.trace_add('write', handle_raw_path)
     handle_target_path()
     R.target_path.trace_add('write', handle_target_path)
     handle_silent()
@@ -902,7 +899,7 @@ if __name__ == '__main__':
     handle_instructions()
     instructions.trace_add('write', handle_instructions)
     handle_new_result_ready()
-    new_result_ready.trace_add('write', handle_new_result_ready)
+    R.new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
     killer.mainloop()
     center_killer()
