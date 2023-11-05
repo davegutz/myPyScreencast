@@ -191,7 +191,7 @@ class MyRecorder:
             self.running = True
             print('started casting', self.raw_path.get())
 
-    def stop(self):
+    def kill(self):
         if self.running is not None:
             kill_ffmpeg(SYS)
             self.cast_button.config(bg="red", fg='black')
@@ -309,20 +309,7 @@ def cast_countdown():
         counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
         thread.start()
-        killer.lift()
-        center_killer()
-        R.record()  # this blocks.  'killer' is used to end early
-
-
-def center_killer(width=300, height=200):
-    # get screen width and height
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-
-    # calculate position x and y coordinates
-    x = (screen_width/2) - (width/2)
-    y = (screen_height/2) - (height/2)
-    killer.geometry('%dx%d+%d+%d' % (width, height, x, y))
+        R.record()  # this blocks.  'STOP' is used to end early
 
 
 def clip_cut():
@@ -439,11 +426,6 @@ def handle_instructions(*args):
 def handle_silent(*args):
     cf[SYS]['silent'] = str(silent.get())
     cf.save_to_file()
-
-
-def kill():
-    kill_ffmpeg(SYS)
-    killer.withdraw()
 
 
 def open_tuner_window():
@@ -740,8 +722,6 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    killer = tk.Tk()
-    killer.attributes('-topmost', True)
     countdown_time = tk.IntVar(root, 8)
     thread_active = tk.IntVar(root, 8)
     tuners = Global(root)
@@ -879,15 +859,14 @@ if __name__ == '__main__':
     cast_frame.pack(fill='x')
     R.cast_button = myButton(cast_frame, text='****    START      ****', command=cast, fg='white', bg='red',
                              wraplength=wrap_length, justify=tk.CENTER)
-    R.stop_button = myButton(cast_frame, text='****    STOP      ****', command=cast, fg=bg_color, bg=bg_color,
+    R.stop_button = myButton(cast_frame, text='****   STOP EARLY  ****', command=R.kill, fg=bg_color, bg=bg_color,
                              wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     R.cast_button.pack(side="left", fill='x')
+    R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
-    kill_button = myButton(killer, text="STOP", command=kill, bg='red')
-    kill_button.pack()
 
     # Begin
     handle_raw_path()
@@ -901,8 +880,5 @@ if __name__ == '__main__':
     handle_new_result_ready()
     R.new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
-    killer.mainloop()
-    center_killer()
-    killer.withdraw()
     counter.mainloop()
     counter.withdraw()
