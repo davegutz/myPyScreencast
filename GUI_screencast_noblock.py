@@ -406,6 +406,7 @@ def handle_new_result_ready(*args):
     if size_of(R.out_path) > 0:  # bytes
         if R.new_result_ready.get():
             paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
+            paint(R.stop_button, bg=bg_color, fg=bg_color)
             record_time = length_of(R.raw_path.get(), silent=silent.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
@@ -416,6 +417,7 @@ def handle_new_result_ready(*args):
             tuners.hms_label.config(text=hms.get())
         else:
             paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
+            paint(R.stop_button, bg=bg_color, fg=bg_color)
 
 
 def handle_clip_path(*args):
