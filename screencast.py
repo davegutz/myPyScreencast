@@ -152,7 +152,7 @@ def length_of(input_file: str, silent=True, save_stdout=True):
         print(Colors.reset)
         print(command + '\n')
         if result_str == -1:
-            record_time = None
+            record_time = 0.
             print(Colors.fg.blue, 'failed.', Colors.reset)
         else:
             record_time = float(result_str[0]) / 60.
@@ -160,7 +160,7 @@ def length_of(input_file: str, silent=True, save_stdout=True):
     else:
         result_str = run_shell_cmd(command, silent=silent, save_stdout=save_stdout)
         if result_str == -1:
-            record_time = None
+            record_time = 0.
         else:
             record_time = float(result_str[0]) / 60.
 
@@ -170,7 +170,7 @@ def length_of(input_file: str, silent=True, save_stdout=True):
 def kill_ffmpeg(sys=None, silent=True):
     command = ''
     if sys == 'Linux':
-        print(f"TODO")
+        command = 'pkill -e ffmpeg'
     elif sys == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
     elif sys == 'Darwin':

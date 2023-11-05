@@ -146,6 +146,7 @@ class MyRecorder:
         cf.save_to_file()
         self.destination_folder_butt.config(text=self.destination_folder)
         self.update_file_paths()
+        handle_target_path()
 
     def enter_folder(self):
         answer = tk.filedialog.askdirectory(title="Select a Recordings Folder", initialdir=self.folder)
@@ -155,6 +156,7 @@ class MyRecorder:
         cf.save_to_file()
         self.folder_butt.config(text=self.folder)
         self.update_file_paths()
+        handle_target_path()
 
     def enter_title(self):
         answer = tk.simpledialog.askstring(title=__file__, prompt="enter title", initialvalue=self.title)
@@ -166,6 +168,7 @@ class MyRecorder:
         cf.save_to_file()
         self.title_butt.config(text=self.title)
         self.update_file_paths()
+        handle_target_path()
 
     def enter_video_grab(self):
         self.video_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter",
@@ -205,7 +208,15 @@ class MyRecorder:
             self.run_perm = False
             self.cast_button.config(bg="red", fg='black')
             self.stop_button.config(bg=bg_color, fg=bg_color)
-            print('start permission cancelled')
+            print('Interrupted.  Start permission cancelled')
+            print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
+            if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
+                msg = 'Interrupted but target ready within 1 min'
+            else:
+                msg = 'Interrupted and >1 min size difference'
+                thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
+                thread.start()
+            handle_target_path()
 
     def update_file_paths(self):
         """Use 'title' and 'folder' to set paths of all files used"""
@@ -291,6 +302,9 @@ def add_to_clip_board(text):
 
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
+    confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
+    if confirmation is False:
+        return
     if size_of(R.target_path.get()) > 0:  # bytes
         confirmation = tk.messagebox.askyesno('query overwrite', 'Target exists:  overwrite?')
         if confirmation is False:
@@ -298,7 +312,7 @@ def cast():
             tk.messagebox.showwarning(message='enter different folder or title first row')
             return
     R.cast_button.config(bg=bg_color)
-    R.stop_button.config(bg="black", fg="white")
+    R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
     R.run_perm = True
     cast_countdown()
 
@@ -313,12 +327,24 @@ def cast_countdown():
     counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
         counter.lift()
+        center_timer()
         root.after(1000, cast_countdown)
     else:
         counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
         thread.start()
         R.record()  # this blocks.  'STOP' is used to end early
+
+
+def center_timer(width=200, height=100):
+    # get screen width and height
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # calculate position x and y coordinates
+    x = (screen_width/2) - (width/2)
+    y = (screen_height/2) - (height/2)
+    counter.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 
 def clip_cut():
@@ -406,7 +432,7 @@ def handle_new_result_ready(*args):
     if size_of(R.out_path) > 0:  # bytes
         if R.new_result_ready.get():
             paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
-            paint(R.stop_button, bg=bg_color, fg=bg_color)
+            paint(R.stop_button, bg=bg_color, activebackground=bg_color, fg=bg_color, activeforeground=bg_color)
             record_time = length_of(R.raw_path.get(), silent=silent.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
@@ -417,7 +443,7 @@ def handle_new_result_ready(*args):
             tuners.hms_label.config(text=hms.get())
         else:
             paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
-            paint(R.stop_button, bg=bg_color, fg=bg_color)
+            paint(R.stop_button, bg=bg_color, activebackground=bg_color, fg=bg_color, activeforeground=bg_color)
 
 
 def handle_clip_path(*args):
@@ -756,6 +782,7 @@ if __name__ == '__main__':
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
+    hms_label = tk.Label(root)
     R = MyRecorder(SYS, cf[SYS]['video_grab'], cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
                    cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'])
 
