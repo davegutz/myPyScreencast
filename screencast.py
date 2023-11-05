@@ -23,7 +23,7 @@ import timeit
 import platform
 # import tkinter as tk
 from screencast_util import *
-# from tkinter import filedialog, messagebox
+from tkinter import messagebox
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
@@ -167,16 +167,16 @@ def length_of(input_file: str, silent=True, save_stdout=True):
     return record_time
 
 
-def kill_ffmpeg(sys=None, silent=True):
+def kill_ffmpeg(sys_=None, silent=True):
     command = ''
-    if sys == 'Linux':
+    if sys_ == 'Linux':
         command = 'pkill -e ffmpeg'
-    elif sys == 'Windows':
+    elif sys_ == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
-    elif sys == 'Darwin':
+    elif sys_ == 'Darwin':
         command = 'pkill ffmpeg'
     else:
-        print(f"kill_ffmpeg: SYS = {sys} unknown")
+        print(f"kill_ffmpeg: SYS = {sys_} unknown")
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
