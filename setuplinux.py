@@ -20,6 +20,6 @@
 #  or
 # run this file in pyCharm as is
 from pyshortcuts import make_shortcut
-
-make_shortcut('GUI_screencast.py', name='GUI_screencast')
-make_shortcut('GUI_screencast.py', name='GUI_screencast')
+import os
+exe = os.path.join(os.getcwd(), 'venv/bin/python3.10')
+make_shortcut('GUI_screencast.py', name='GUI_screencast', executable=exe)
