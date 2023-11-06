@@ -112,8 +112,8 @@ class MyRecorder:
         self.running = None
         self.thd_num = -1
         self.thread = []
-        self.cast_button = None
-        self.stop_button = None
+        self.cast_button =  myButton()
+        self.stop_button =  myButton()
         self.video_grab_butt = myButton()
         self.video_in_butt = myButton()
         self.audio_grab_butt = myButton()
@@ -629,9 +629,11 @@ def update_all_file_paths():
     if size_of(R.raw_path.get()) > 0:
         paint(R.raw_path_label, bg='yellow')
         paint(tuners.raw_path_label, bg='yellow')
+        paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
     else:
         paint(R.raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
+        paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
     raw_clip_file.set(R.title + '_clip_raw.mkv')
     raw_clip_path.set(os.path.join(R.folder, raw_clip_file.get()))
     if size_of(raw_clip_path.get()) > 0:
