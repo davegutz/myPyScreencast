@@ -27,7 +27,7 @@ The solution is to start Drive e.g. Start or Search - Drive - Google Drive App
 
 ## Shortcut:  how do I make one?
 Browse to the folder with GUI_screencast.py in it.  right-click on GUI_screencast.py, select Other, click Create Shortcut.   Move the
-resulting file to your desktop or wherever you want it.
+resulting file to your desktop or wherever you want it.  If  you want to run it with the venv, right click on the shortcut, go to properties, opens with  - change - more apps - scroll to bottom - browse to the _venv/Scripts/python_. Don't change any other options. A regular shell window will open for you to monitor running.
 
 
 ## My python installation is not found
