@@ -112,8 +112,8 @@ class MyRecorder:
         self.running = None
         self.thd_num = -1
         self.thread = []
-        self.cast_button = None
-        self.stop_button = None
+        self.cast_button =  myButton()
+        self.stop_button =  myButton()
         self.video_grab_butt = myButton()
         self.video_in_butt = myButton()
         self.audio_grab_butt = myButton()
@@ -271,6 +271,7 @@ class FFmpegThread(Thread):
                                 crf=crf.get(),
                                 rec_time=rec_time.get()*60.,
                                 output_file=R.raw_path.get())
+            R.running = False
             if rf is not None and rr is True:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
@@ -279,7 +280,6 @@ class FFmpegThread(Thread):
             if size_of(R.target_path.get()) > 0:
                 root.lift()
                 print('sending message')
-                print("record:  R.target_path.get()=", R.target_path.get(), " type =", type(R.target_path.get()))
                 if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
                     msg = 'target ready'
                 else:
@@ -303,6 +303,7 @@ def add_to_clip_board(text):
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
+    confirmation = tk.messagebox.askokcancel('reminder', 'Have you redirected sound?')
     if confirmation is False:
         return
     if size_of(R.target_path.get()) > 0:  # bytes
@@ -322,7 +323,6 @@ def cast_countdown():
     if R.run_perm is False:
         return
     msg = 'Counting down'
-    print(f"countdown {countdown_time.get()=}")
     countdown_time.set(countdown_time.get() - 1)
     counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
@@ -410,7 +410,7 @@ def handle_target_path(*args):
     if size_of(R.target_path.get()) > 0:  # bytes
         tk.messagebox.showwarning(message='target file exists')
     if size_of(R.raw_path.get()) > 0:  # bytes
-        record_time = length_of(R.raw_path.get(), silent=silent.get())
+        record_time = length_of(R.raw_path.get())
         if record_time is not None:
             raw_time.set(record_time / 60.)
         else:
@@ -433,7 +433,7 @@ def handle_new_result_ready(*args):
         if R.new_result_ready.get():
             paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
             paint(R.stop_button, bg=bg_color, activebackground=bg_color, fg=bg_color, activeforeground=bg_color)
-            record_time = length_of(R.raw_path.get(), silent=silent.get())
+            record_time = length_of(R.raw_path.get())
             if record_time is not None:
                 raw_time.set(record_time / 60.)
             else:
@@ -629,9 +629,11 @@ def update_all_file_paths():
     if size_of(R.raw_path.get()) > 0:
         paint(R.raw_path_label, bg='yellow')
         paint(tuners.raw_path_label, bg='yellow')
+        paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
     else:
         paint(R.raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
+        paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
     raw_clip_file.set(R.title + '_clip_raw.mkv')
     raw_clip_path.set(os.path.join(R.folder, raw_clip_file.get()))
     if size_of(raw_clip_path.get()) > 0:
@@ -759,8 +761,8 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    countdown_time = tk.IntVar(root, 8)
-    thread_active = tk.IntVar(root, 8)
+    countdown_time = tk.IntVar(root, 10)
+    thread_active = tk.IntVar(root, 0)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())

@@ -23,7 +23,7 @@ import timeit
 import platform
 # import tkinter as tk
 from screencast_util import *
-# from tkinter import filedialog, messagebox
+from tkinter import messagebox
 os.environ['PYTHONIOENCODING'] = 'utf - 8'  # prevents UnicodeEncodeError: 'charmap' codec can't encode character
 
 
@@ -112,10 +112,6 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
 # Delay video to sync with audio
 def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
-    print(f"{delay=} {input_file=} {output_file=} {silent=}")
-
-    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
-
     command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
                ' -i "{:s}"'.format(input_file) +
@@ -167,16 +163,16 @@ def length_of(input_file: str, silent=True, save_stdout=True):
     return record_time
 
 
-def kill_ffmpeg(sys=None, silent=True):
+def kill_ffmpeg(sys_=None, silent=True):
     command = ''
-    if sys == 'Linux':
+    if sys_ == 'Linux':
         command = 'pkill -e ffmpeg'
-    elif sys == 'Windows':
+    elif sys_ == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
-    elif sys == 'Darwin':
-        print(f"TODO")
+    elif sys_ == 'Darwin':
+        command = 'pkill ffmpeg'
     else:
-        print(f"kill_ffmpeg: SYS = {sys} unknown")
+        print(f"kill_ffmpeg: SYS = {sys_} unknown")
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -213,7 +209,7 @@ def screencast(waiting=False, silent=True, conversation=False,
 
     # Screencast
     if audio_grabber is None or audio_grabber == '':  # Darwin
-        command = ("ffmpeg -threads 4" +
+        command = ("ffmpeg423 -threads 4" +
                    " -f {:s}".format(video_grabber) +
                    " -probesize 42M" +
                    " -thread_queue_size 1024" +
