@@ -19,12 +19,13 @@ The first run creates a preferences file 'GUI_screencast.pref' in the folder whe
 
 The first run with a new model also loads the model into your '$HOME/.cache' folder.
 
+## FAQ
 
-## Shortcut:  how do I make one?
+### Shortcut:  how do I make one?
 Browse to the folder with GUI_screencast.py in it.  right-click on GUI_screencast.py, select Other, click Create Shortcut.   Move the
 resulting file to your desktop or wherever you want it.
 
-## ffmpeg not found
+### ffmpeg not found
 Installation of ffmpeg is difficult, for some reason.   There is path mangling and some code calls the executable and other calls native python.   The following usually resets everything and fixes it.
 ```commandline
 python3 -m pip uninstall ffmpeg
@@ -35,6 +36,25 @@ brew uninstall ffmpeg
 python3 -m pip install ffmpeg-python
 brew install ffmpeg
 ```
+### Audio stutters
+
+This happens on the 2015 (8 year-old) MacBook Air I developed on.  It improved when I downgraded ffmpeg to 4.2.3.
+
+You can grab a prebuilt 4.2 Mac binary from https://evermeet.cx/pub/ffmpeg/ffmpeg-4.2.3.zip (it's linked from https://ffmpeg.org/download.html#build-mac)
+
+Once it's in the download folder, unzip it then
+```commandline
+mv ffmpeg ffmpeg423
+sudo cp ffmpeg423 /opt/local/bin
+```
+
+Now browse to it using Finder.  Right-click and select 'Open' - OK to register it as safe.
+
+The line in screencast.py should look like
+```commandline
+command = .... # Darwin
+```
+should point to ffmpeg423.
 
 [Back to top](../README.md)
 
