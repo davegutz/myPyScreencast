@@ -112,10 +112,6 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
 # Delay video to sync with audio
 def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
-    print(f"{delay=} {input_file=} {output_file=} {silent=}")
-
-    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
-
     command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
                ' -i "{:s}"'.format(input_file) +
