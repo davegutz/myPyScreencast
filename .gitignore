@@ -8,3 +8,5 @@ GUI_screencast.ini
 .DS_Store
 myGmail.py
 *.py~
+.idea/misc.xml
+.idea/myPyScreencast.iml
