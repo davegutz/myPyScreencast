@@ -220,13 +220,13 @@ class MyRecorder:
 
     def update_file_paths(self):
         """Use 'title' and 'folder' to set paths of all files used"""
-        self.out_file = self.title + '.mkv'
+        self.out_file = self.title + '.mp4'
         self.out_path = os.path.join(self.folder, self.out_file)
         self.new_result_ready.set(size_of(self.out_path) > 0)
         new_target_path = os.path.join(self.destination_folder, self.out_file)
         if new_target_path != self.target_path.get():
             self.target_path.set(new_target_path)  # Trip the trace only on actual change
-        self.raw_file = self.title + '_raw.mkv'
+        self.raw_file = self.title + '_raw.mp4'
         self.raw_path.set(os.path.join(self.folder, self.raw_file))
 
         # paint
@@ -634,7 +634,7 @@ def update_all_file_paths():
         paint(R.raw_path_label, bg=bg_color)
         paint(tuners.raw_path_label, bg=bg_color)
         paint(R.cast_button, bg='red', activebackground='red', fg='white', activeforeground='purple')
-    raw_clip_file.set(R.title + '_clip_raw.mkv')
+    raw_clip_file.set(R.title + '_clip_raw.mp4')
     raw_clip_path.set(os.path.join(R.folder, raw_clip_file.get()))
     if size_of(raw_clip_path.get()) > 0:
         paint(tuners.raw_clip_file_label, bg='yellow')
@@ -644,7 +644,7 @@ def update_all_file_paths():
         paint(tuners.clip_path_label, bg='yellow')
     else:
         paint(tuners.clip_path_label, bg=bg_color)
-    clip_file.set(R.title + '_clip.mkv')
+    clip_file.set(R.title + '_clip.mp4')
     clip_path.set(os.path.join(R.folder, clip_file.get()))
 
 
