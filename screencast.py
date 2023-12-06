@@ -216,6 +216,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                    " -i {:s}:{:s}".format(video_in, audio_in) +
                    " -vf crop=1382:814:57:82" +  # full prime opera
                    " -vcodec libx264 -crf {:d}".format(crf) +
+                   " scale=720:404" +
                    " -t {:5.1f} -y ".format(rec_time) +
                    ' "{:s}"'.format(output_file))
     else:
@@ -228,6 +229,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                    " -thread_queue_size 1024" +
                    " -i {:s}".format(audio_in) +
                    " -vcodec libx264 -crf {:d}".format(crf) +
+                   " scale=720:404" +
                    " -t {:5.1f} -y ".format(rec_time) +
                    ' "{:s}"'.format(output_file))
 
