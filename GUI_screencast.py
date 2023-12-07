@@ -290,9 +290,9 @@ class FFmpegThread(Thread):
                 pyautogui.press('F5')  # Attempt to exit fullscreen
                 tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
-            else:
-                print('aborting recording....need to enter title.  Presently = ', R.title)
-            thread_active.set(thread_active.get()-1)
+        else:
+            print('aborting recording....need to enter title.  Presently = ', R.title)
+        thread_active.set(thread_active.get()-1)
 
 
 # Global methods
