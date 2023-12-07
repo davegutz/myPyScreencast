@@ -1,0 +1,13 @@
+It all begins with Plex and appears to end at ffmpeg as the easiest possible solution.  I love ffmpeg!  I use Plex running on Linux to stream over home network to a Roku.  I've used this for years until recently as I'll describe below.  I have a temporary workaround using Chromecast to bypass this issue.
+
+Some videos don't play. There are two differences between the ones that play and the ones that don'that.  I list these below.  Another possibility not listed is that Roku / Plex / Ubuntu have some kind of interaction (bug).  Maybe the Roku device is old and unsupported?  I listed my config way below.
+
+1. ffmpeg used to generate mkv / mp4 for the ones that don't play (sound but black screen).   Handbrake and WinxDVD used to generate mkv / m4a for the ones that do play.
+2. Video file properties show codec H.264 High 4:4:4 for the ones that don't play (sound but black screen). and H.264 Constrained Baseline Profile for the ones that do play.
+
+I cannot figure out how to configure ffmpeg to generate H.264 Constrained Baseline Profile.  That seems like my next logical step. I tried various crf values only to produce grainy results still with High 4:4:4 nature.
+
+
+Plex 1.32.8.7639 running on Ubuntu 22.04.1
+Roku 3920X s/w 12.5.0 build 4178-91
+ffmpeg 4.4.2 running on Ubuntu 22.04.1
