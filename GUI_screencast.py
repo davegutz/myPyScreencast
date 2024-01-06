@@ -91,7 +91,7 @@ class Global:
 
 class MyRecorder:
     def __init__(self, sys, video_grab_, video_in_, audio_grab_, audio_in_,
-                 cwd_path_, title_, folder_, destination_folder_):
+                 cwd_path_, title_, folder_, destination_folder_, countdown_time_=10):
         self.sys = sys
         self.video_grab = video_grab_
         self.video_in = video_in_
@@ -122,6 +122,7 @@ class MyRecorder:
         self.folder_butt = myButton()
         self.destination_folder_butt = myButton()
         self.run_perm = False
+        self.countdown_time = countdown_time_
 
     def enter_audio_grab(self):
         self.audio_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
@@ -315,6 +316,7 @@ def cast():
     R.cast_button.config(bg=bg_color)
     R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
     R.run_perm = True
+    countdown_time.set(R.countdown_time)
     cast_countdown()
 
 
@@ -326,6 +328,7 @@ def cast_countdown():
     countdown_time.set(countdown_time.get() - 1)
     counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
+        counter.deiconify()
         counter.lift()
         center_timer()
         root.after(1000, cast_countdown)
@@ -761,7 +764,6 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    countdown_time = tk.IntVar(root, 10)
     thread_active = tk.IntVar(root, 0)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
@@ -785,8 +787,10 @@ if __name__ == '__main__':
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
     hms_label = tk.Label(root)
+    COUNTDOWN_SEC =10
     R = MyRecorder(SYS, cf[SYS]['video_grab'], cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
-                   cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'])
+                   cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'], COUNTDOWN_SEC)
+    countdown_time = tk.IntVar(root, R.countdown_time)
 
     # Pre-define so update_all_file_paths() works
     update_all_file_paths()
