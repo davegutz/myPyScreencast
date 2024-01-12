@@ -57,6 +57,11 @@ class Begini(ConfigParser):
                 self.write(cfg_file)
             print('wrote', self.config_path)
 
+    def __str__(self, prefix=''):
+        s = prefix + "begini:\n"
+        s += "  config_path =  {:s}\n".format(self.config_path)
+        return s
+
     # Get an item
     def get_item(self, ind, item):
         return self[ind][item]
@@ -123,6 +128,25 @@ class MyRecorder:
         self.destination_folder_butt = myButton()
         self.run_perm = False
         self.countdown_time = countdown_time_
+
+    def __str__(self, prefix=''):
+        s = prefix + "begini:\n"
+        s += "  cwd_path =  '{:s}'\n".format(self.cwd_path)
+        s += "  folder =  '{:s}'\n".format(self.folder)
+        s += "  destination_folder =  '{:s}'\n".format(self.destination_folder)
+        s += "  out_file =  '{:s}'\n".format(self.out_file)
+        s += "  raw_file =  '{:s}'\n".format(self.raw_file)
+        s += "  raw_path =  '{:s}'\n".format(self.raw_path.get())
+        s += "  out_file =  '{:s}'\n".format(self.out_file)
+        s += "  target_path =  '{:s}'\n".format(self.target_path.get())
+        s += "  new_result_ready =  {:d}\n".format(self.new_result_ready.get())
+        if self.running is not None:
+            s += "  running =  {:d}\n".format(self.running)
+        else:
+            s += "  running =  None\n"
+        s += "  run_perm =  {:d}\n".format(self.run_perm)
+        s += "  countdown_time =  {:d}\n".format(self.countdown_time)
+        return s
 
     def enter_audio_grab(self):
         self.audio_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
@@ -229,6 +253,7 @@ class MyRecorder:
             self.target_path.set(new_target_path)  # Trip the trace only on actual change
         self.raw_file = self.title + '_raw.mp4'
         self.raw_path.set(os.path.join(self.folder, self.raw_file))
+        self.raw_path_label.config(text=self.raw_path.get())
 
         # paint
         if self.title == '' or self.title == '<enter title>':
@@ -425,6 +450,7 @@ def handle_target_path(*args):
     tuners.hms_label.config(text=hms.get())
     cf.save_to_file()
     update_all_file_paths()
+    action_label.config(text=tuners.raw_clip_file_label)
 
 
 def handle_raw_path(*args):
@@ -557,6 +583,26 @@ def paint(tk_object, bg='lightgray', fg='black', activebackground=None, activefo
         activeforeground = fg
     tk_object.config(bg=bg, activebackground=activebackground, fg=fg, activeforeground=activeforeground)
 
+
+def print_vars():
+    print("\n\ncf=", cf)
+    print("R=", R)
+    print(f"{clip_file.get() = }")
+    print(f"{clip_path.get() = }")
+    print(f"{countdown_time.get() = }")
+    print(f"{crf.get() = }")
+    print(f"{cwd_path.get() = }")
+    print(f"{instructions.get() = }")
+    print(f"{hms.get() = }")
+    print(f"{raw_clip_file.get() = }")
+    print(f"{raw_clip_path.get() = }")
+    print(f"{raw_time.get() = }")
+    print(f"{rec_time.get() = }")
+    print(f"{silent.get() = }")
+    print(f"{start_clip.get() = }")
+    print(f"{stop_clip.get() = }")
+    print(f"{thread_active.get() = }")
+    print(f"{video_delay.get() = }")
 
 def send_message(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
@@ -906,9 +952,11 @@ if __name__ == '__main__':
     R.stop_button = myButton(cast_frame, text='****   STOP EARLY  ****', command=R.kill, fg=bg_color, bg=bg_color,
                              wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
+    print_butt = myButton(cast_frame, text="print vars", command=print_vars, bg=bg_color)
     R.cast_button.pack(side="left", fill='x')
     R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
+    print_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
 
