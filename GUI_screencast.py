@@ -99,7 +99,7 @@ class Global:
         self.raw_path_label.config(text=R.raw_path.get())
         self.raw_clip_file_label.config(text=raw_clip_file.get())
         self.clip_path_label.config(text=clip_file.get())
-        
+
 
 class MyRecorder:
     def __init__(self, sys, video_grab_, video_in_, audio_grab_, audio_in_,
@@ -309,7 +309,6 @@ class FFmpegThread(Thread):
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
                 sync()
-                shutil.move(R.out_path, R.target_path.get())
             if size_of(R.target_path.get()) > 0:
                 root.lift()
                 print('sending message')
@@ -383,9 +382,10 @@ def center_timer(width=200, height=100):
 
 
 def clip_cut():
+    print("\nCutting", R.raw_path.get(), "time", start_clip.get(), "-", stop_clip.get(), "min. to", raw_clip_path.get())
     cut_clip(silent=silent.get(), raw_file=R.raw_path.get(),
              start_clip=start_clip.get()*60., stop_clip=stop_clip.get()*60.,
-             clip_file=clip_path.get())
+             clip_file=raw_clip_path.get())
     update_all_file_paths()
 
 
@@ -663,6 +663,9 @@ def sync():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
                              output_file=R.out_path)
+        if size_of(R.out_path) > 0:
+            shutil.move(R.out_path, R.target_path.get())
+            print("Moved synchronized result to ", R.target_path.get())
         update_all_file_paths()
     else:
         print("record first *******")
@@ -678,7 +681,7 @@ def sync_clip():
                              output_file=os.path.join(os.getcwd(), clip_path.get()))
         update_all_file_paths()
     else:
-        print("record first *******")
+        print("record clip first *******")
 
 
 def update_all_file_paths():
@@ -961,11 +964,11 @@ if __name__ == '__main__':
     R.stop_button = myButton(cast_frame, text='****   STOP EARLY  ****', command=R.kill, fg=bg_color, bg=bg_color,
                              wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
-    print_butt = myButton(cast_frame, text="print vars", command=print_vars, bg=bg_color)
+    # print_butt = myButton(cast_frame, text="print vars", command=print_vars, bg=bg_color)
     R.cast_button.pack(side="left", fill='x')
     R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
-    print_butt.pack(side="right", fill='x')
+    # print_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
 
