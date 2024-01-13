@@ -53,7 +53,7 @@ arg = 'ffmpeg -f gdigrab -threads 4 -r 30 -framerate 30 -i desktop -f dshow -i a
 
 # doesn't work
 # arg = 'ffmpeg -f gdigrab -threads 4 -r 30 -framerate 30 -i desktop -f dshow -itsoffset 2.0 -i audio="CABLE Output (VB-Audio Virtual Cable)" -c:v h264_nvenc -qp 0 output.mkv'
--vf "scale=720:404"
+# -vf "scale=720:404"
 os.system(arg)
 
 # audio ahead
