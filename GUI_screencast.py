@@ -92,7 +92,14 @@ class Global:
         self.start_clip_butt = myButton(owner)
         self.stop_clip_butt = myButton(owner)
         self.clip_cut_butt = myButton(owner)
+        self.out_path_label = tk.Label()
 
+    def update(self):
+        self.out_path_label.config(text=R.out_file)
+        self.raw_path_label.config(text=R.raw_path.get())
+        self.raw_clip_file_label.config(text=raw_clip_file.get())
+        self.clip_path_label.config(text=clip_file.get())
+        
 
 class MyRecorder:
     def __init__(self, sys, video_grab_, video_in_, audio_grab_, audio_in_,
@@ -451,6 +458,7 @@ def handle_target_path(*args):
     cf.save_to_file()
     update_all_file_paths()
     action_label.config(text=tuners.raw_clip_file_label)
+    tuners.update()
 
 
 def handle_raw_path(*args):
@@ -587,6 +595,7 @@ def paint(tk_object, bg='lightgray', fg='black', activebackground=None, activefo
 def print_vars():
     print("\n\ncf=", cf)
     print("R=", R)
+    print(f"GLOBALS")
     print(f"{clip_file.get() = }")
     print(f"{clip_path.get() = }")
     print(f"{countdown_time.get() = }")
