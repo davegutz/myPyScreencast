@@ -19,7 +19,7 @@ import json
 import inspect
 import subprocess
 import configparser
-import pkg_resources
+import pkg_resources  # setuptools
 from Colors import Colors
 from mbox import MessageBox
 from typing import Callable, TextIO
@@ -214,11 +214,11 @@ def display_result(output_file, platform, silent, conversation=False):
 
     if silent is False:
         if platform == 'Darwin':
-            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
+            print('run:  &"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe" -I dummy ' + output_file)
         if platform == 'Linux':
-            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
+            print('run:  &"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe" -I dummy ' + output_file)
         elif platform == 'Windows':
-            print('run:  &"C:\Program Files\VideoLAN\VLC\vlc.exe" -I dummy ' + output_file)
+            print('run:  &"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe" -I dummy ' + output_file)
             # media = vlc.MediaPlayer(output_file)
             # media.play()
     else:
