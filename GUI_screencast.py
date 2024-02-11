@@ -33,6 +33,7 @@ import smtplib
 import shutil
 import time
 if platform.system() == 'Darwin':
+    # noinspection PyUnresolvedReferences
     from ttwidgets import TTButton as myButton
 else:
     import tkinter as tk
@@ -124,8 +125,8 @@ class MyRecorder:
         self.running = None
         self.thd_num = -1
         self.thread = []
-        self.cast_button =  myButton()
-        self.stop_button =  myButton()
+        self.cast_button = myButton()
+        self.stop_button = myButton()
         self.video_grab_butt = myButton()
         self.video_in_butt = myButton()
         self.audio_grab_butt = myButton()
@@ -244,6 +245,7 @@ class MyRecorder:
             print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
             if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
                 msg = 'Interrupted but target ready within 1 min'
+                print(msg)
             else:
                 msg = 'Interrupted and >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
@@ -257,9 +259,9 @@ class MyRecorder:
         self.new_result_ready.set(size_of(self.out_path) > 0)
         new_target_path = os.path.join(self.destination_folder, self.out_file)
         if new_target_path != self.target_path.get():
-            self.target_path.set(new_target_path)  # Trip the trace only on actual change
+            self.target_path.set(str(new_target_path))  # Trip the trace only on actual change
         self.raw_file = self.title + '_raw.mp4'
-        self.raw_path.set(os.path.join(self.folder, self.raw_file))
+        self.raw_path.set(str(os.path.join(self.folder, self.raw_file)))
         self.raw_path_label.config(text=self.raw_path.get())
 
         # paint
@@ -335,6 +337,8 @@ def add_to_clip_board(text):
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
+    if confirmation is False:
+        return
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you redirected sound?')
     if confirmation is False:
         return
@@ -440,7 +444,7 @@ def enter_video_delay():
     tuners.video_delay_tuner_butt.config(text=str(video_delay.get()))
 
 
-def handle_target_path(*args):
+def handle_target_path(*_args):
     R.new_result_ready.set(False)
     if size_of(R.target_path.get()) > 0:  # bytes
         tk.messagebox.showwarning(message='target file exists')
@@ -457,15 +461,15 @@ def handle_target_path(*args):
     tuners.hms_label.config(text=hms.get())
     cf.save_to_file()
     update_all_file_paths()
-    action_label.config(text=tuners.raw_clip_file_label)
+    # action_label.config(text=tuners.raw_clip_file_label)
     tuners.update()
 
 
-def handle_raw_path(*args):
+def handle_raw_path(*_args):
     update_all_file_paths()
 
 
-def handle_new_result_ready(*args):
+def handle_new_result_ready(*_args):
     if size_of(R.out_path) > 0:  # bytes
         if R.new_result_ready.get():
             paint(R.cast_button, bg='yellow', activebackground='yellow', fg='black', activeforeground='purple')
@@ -483,12 +487,12 @@ def handle_new_result_ready(*args):
             paint(R.stop_button, bg=bg_color, activebackground=bg_color, fg=bg_color, activeforeground=bg_color)
 
 
-def handle_clip_path(*args):
+def handle_clip_path(*_args):
     """Tuner window"""
     update_all_file_paths()
 
 
-def handle_instructions(*args):
+def handle_instructions(*_args):
     cf[SYS]['instructions'] = str(instructions.get())
     cf.save_to_file()
     if instructions.get():
@@ -497,7 +501,7 @@ def handle_instructions(*args):
         doc_block.config(text='')
 
 
-def handle_silent(*args):
+def handle_silent(*_args):
     cf[SYS]['silent'] = str(silent.get())
     cf.save_to_file()
 
@@ -596,22 +600,23 @@ def print_vars():
     print("\n\ncf=", cf)
     print("R=", R)
     print(f"GLOBALS")
-    print(f"{clip_file.get() = }")
-    print(f"{clip_path.get() = }")
-    print(f"{countdown_time.get() = }")
-    print(f"{crf.get() = }")
-    print(f"{cwd_path.get() = }")
-    print(f"{instructions.get() = }")
-    print(f"{hms.get() = }")
-    print(f"{raw_clip_file.get() = }")
-    print(f"{raw_clip_path.get() = }")
-    print(f"{raw_time.get() = }")
-    print(f"{rec_time.get() = }")
-    print(f"{silent.get() = }")
-    print(f"{start_clip.get() = }")
-    print(f"{stop_clip.get() = }")
-    print(f"{thread_active.get() = }")
-    print(f"{video_delay.get() = }")
+    print(f"{clip_file.get()=}")
+    print(f"{clip_path.get()=}")
+    print(f"{countdown_time.get()=}")
+    print(f"{crf.get()=}")
+    print(f"{cwd_path.get()=}")
+    print(f"{instructions.get()=}")
+    print(f"{hms.get()=}")
+    print(f"{raw_clip_file.get()=}")
+    print(f"{raw_clip_path.get()=}")
+    print(f"{raw_time.get()=}")
+    print(f"{rec_time.get()=}")
+    print(f"{silent.get()=}")
+    print(f"{start_clip.get()=}")
+    print(f"{stop_clip.get()=}")
+    print(f"{thread_active.get()=}")
+    print(f"{video_delay.get()=}")
+
 
 def send_message(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
@@ -844,8 +849,8 @@ if __name__ == '__main__':
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
-    hms_label = tk.Label(root)
-    COUNTDOWN_SEC =10
+    # hms_label = tk.Label(root)
+    COUNTDOWN_SEC = 10
     R = MyRecorder(SYS, cf[SYS]['video_grab'], cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
                    cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'], COUNTDOWN_SEC)
     countdown_time = tk.IntVar(root, R.countdown_time)

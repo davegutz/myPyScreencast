@@ -96,7 +96,7 @@ python3 GUI_screencast.py
 
    - If you want, make life easier by adding 'small.en' after the 'Target:' data to force it to always run the excellent small model without having to select it everytime the program runs
 
-   - 'Exec=/usr/bin/python3.10 /home/<username>/Documents/GitHub/myPyScreencast/GUI_screencast.py small.en
+   - 'Exec=/usr/bin/python3.10 /home/<username>/Documents/GitHub/myPyScreencast/GUI_screencast.py small.en'
 
 ### Special Developer Instructions:  [here](DEVELOPER.md)
 
