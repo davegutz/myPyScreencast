@@ -26,7 +26,7 @@ from threading import Thread
 import tkinter.simpledialog
 import tkinter.messagebox
 from myGmail import *
-import pyautogui
+from pynput.keyboard import Key, Controller
 import pyperclip
 import platform
 import smtplib
@@ -298,7 +298,8 @@ class FFmpegThread(Thread):
         if R.title != '<enter title>' and R.title != '' and R.title != 'None':
             thread_active.set(thread_active.get()+1)
             print('sending message')
-            thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': 'Starting ' + str(rec_time.get())})
+            thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': 'Starting ' +
+                                                                                        str(rec_time.get())})
             thread.start()
             rf, rr = screencast(silent=silent.get(),
                                 video_grabber=R.video_grab, video_in=R.video_in,
@@ -321,7 +322,8 @@ class FFmpegThread(Thread):
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
-                pyautogui.press('F5')  # Attempt to exit fullscreen
+                keyboard = Controller()
+                keyboard.press(Key.f5)  # Attempt to exit fullscreen
                 tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
         else:
@@ -413,31 +415,36 @@ def create_file_txt(option_, unit_, battery_):
 
 
 def enter_crf():
-    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file", initialvalue=crf.get()))
+    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file",
+                                       initialvalue=crf.get()))
     cf[SYS]['crf'] = str(crf.get())
     cf.save_to_file()
     crf_butt.config(text=crf.get())
 
 
 def enter_rec_time():
-    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, minutes", initialvalue=rec_time.get()))
+    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, minutes",
+                                          initialvalue=rec_time.get()))
     cf[SYS]['rec_time'] = str(rec_time.get())
     cf.save_to_file()
     time_butt.config(text=rec_time.get())
 
 
 def enter_start_clip_time():
-    start_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes", initialvalue=start_clip.get()))
+    start_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes",
+                                            initialvalue=start_clip.get()))
     tuners.start_clip_butt.config(text=start_clip.get())
 
 
 def enter_stop_clip_time():
-    stop_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes", initialvalue=stop_clip.get()))
+    stop_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes",
+                                           initialvalue=stop_clip.get()))
     tuners.stop_clip_butt.config(text=stop_clip.get())
 
 
 def enter_video_delay():
-    video_delay.set(float(tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-", initialvalue=video_delay.get())))
+    video_delay.set(float(tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-",
+                                                   initialvalue=video_delay.get())))
     cf[SYS]['video_delay'] = str(video_delay.get())
     cf.save_to_file()
     video_delay_butt.config(text=str(video_delay.get()))
@@ -515,7 +522,8 @@ def open_tuner_window():
     video_delay_tuner_frame = tk.Frame(tuner_window, bg=box_color, bd=4, relief=relief)
     video_delay_tuner_frame.pack(side=tk.TOP)
     vd_label = tk.Label(video_delay_tuner_frame, text="Video delay +/-", bg=bg_color)
-    tuners.video_delay_tuner_butt = myButton(video_delay_tuner_frame, text=video_delay.get(), command=enter_video_delay, fg="purple", bg=bg_color)
+    tuners.video_delay_tuner_butt = myButton(video_delay_tuner_frame, text=video_delay.get(),
+                                             command=enter_video_delay, fg="purple", bg=bg_color)
     vd_label.pack(side="left", fill='x')
     tuners.video_delay_tuner_butt.pack(side="left", fill='x')
 
@@ -523,8 +531,10 @@ def open_tuner_window():
     clipcut_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     clipcut_frame.pack(side=tk.TOP)
     clipcut_label = tk.Label(clipcut_frame, text="Clip range, minutes:", bg=bg_color)
-    tuners.start_clip_butt = myButton(clipcut_frame, text=start_clip.get(), command=enter_start_clip_time, fg="green", bg=bg_color)
-    tuners.stop_clip_butt = myButton(clipcut_frame, text=stop_clip.get(), command=enter_stop_clip_time, fg="green", bg=bg_color)
+    tuners.start_clip_butt = myButton(clipcut_frame, text=start_clip.get(),
+                                      command=enter_start_clip_time, fg="green", bg=bg_color)
+    tuners.stop_clip_butt = myButton(clipcut_frame, text=stop_clip.get(),
+                                     command=enter_stop_clip_time, fg="green", bg=bg_color)
     tuners.hms_label = tk.Label(clipcut_frame, text="  within " + "{:8.3f} minutes".format(raw_time.get()), bg=bg_color)
     clipcut_label.pack(side="left", fill='x')
     tuners.start_clip_butt.pack(side="left", fill='x')
@@ -545,7 +555,8 @@ def open_tuner_window():
     raw_clip_frame.pack(side=tk.TOP)
     tuners.clip_cut_butt = myButton(raw_clip_frame, text=" CLIP IT ", command=clip_cut, bg=bg_color, fg='black')
     raw_clip_label = tk.Label(raw_clip_frame, text="Clip file=", bg=bg_color)
-    tuners.raw_clip_file_label = tk.Label(raw_clip_frame, text=raw_clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.raw_clip_file_label = tk.Label(raw_clip_frame, text=raw_clip_file.get(), wraplength=wrap_length,
+                                          justify=tk.RIGHT)
     tuners.raw_clip_file_label.config(bg=bg_color)
     tuners.clip_cut_butt.pack(side="left", fill='x')
     raw_clip_label.pack(side="left", fill='x')
@@ -554,7 +565,8 @@ def open_tuner_window():
     # Sync clip
     sync_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_clip_frame.pack(side=tk.TOP)
-    tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=sync_clip, bg=bg_color, fg='black')
+    tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=sync_clip, bg=bg_color,
+                                           fg='black')
     sync_clip_label = tk.Label(sync_clip_frame, text="Sync clip=", bg=bg_color)
     tuners.clip_path_label = tk.Label(sync_clip_frame, text=clip_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.clip_path_label.config(bg=bg_color)
@@ -647,14 +659,11 @@ def stay_awake(up_set_min=3.):
     # Timer starts
     start_time = float(time.time())
     up_time_min = 0.0
-    # FAILSAFE to FALSE feature is enabled by default so that you can easily stop execution of
-    # your pyautogui program by manually moving the mouse to the upper left corner of the screen.
-    # Once the mouse is in this location, pyautogui will throw an exception and exit.
-    pyautogui.FAILSAFE = False
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
+        keyboard = Controller()
         for i in range(0, 3):
-            pyautogui.press('shift')  # Shift key does not disturb fullscreen
+            keyboard.press(Key.shift)  # Shift key does not disturb fullscreen
         up_time_min = (time.time() - start_time) / 60.
         print(f"stay_awake: {up_time_min=}")
     print(f"stay_awake: ending")
@@ -890,7 +899,8 @@ if __name__ == '__main__':
     target_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     target_frame.pack(fill='x')
     destination_label = tk.Label(target_frame, text="Target =", bg=bg_color)
-    R.destination_folder_butt = myButton(target_frame, text=R.destination_folder, command=R.enter_destination_folder, fg="blue", bg=bg_color)
+    R.destination_folder_butt = myButton(target_frame, text=R.destination_folder, command=R.enter_destination_folder,
+                                         fg="blue", bg=bg_color)
     slash = tk.Label(target_frame, text="/", fg="blue", bg=bg_color)
     R.title_butt = myButton(target_frame, text=R.title, command=R.enter_title, fg="blue", bg=bg_color)
     destination_label.pack(side="left", fill='x')
@@ -921,7 +931,8 @@ if __name__ == '__main__':
     video_delay_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     video_delay_frame.pack(fill='x')
     video_delay_label = tk.Label(video_delay_frame, text="Video delay +/-", bg=bg_color)
-    video_delay_butt = myButton(video_delay_frame, text=str(video_delay.get()), command=enter_video_delay, fg="purple", bg=bg_color)
+    video_delay_butt = myButton(video_delay_frame, text=str(video_delay.get()), command=enter_video_delay, fg="purple",
+                                bg=bg_color)
     video_delay_label.pack(side="left", fill='x')
     video_delay_butt.pack(side="left", fill='x')
 
@@ -948,15 +959,18 @@ if __name__ == '__main__':
     # Silent row
     silent_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     silent_frame.pack(fill='x')
-    silent_butt = tk.Checkbutton(silent_frame, text='silent', bg=bg_color, variable=silent, onvalue=True, offvalue=False)
-    instructions_butt = tk.Checkbutton(silent_frame, text='instructions', bg=bg_color, variable=instructions, onvalue=True, offvalue=False)
+    silent_butt = tk.Checkbutton(silent_frame, text='silent', bg=bg_color, variable=silent, onvalue=True,
+                                 offvalue=False)
+    instructions_butt = tk.Checkbutton(silent_frame, text='instructions', bg=bg_color, variable=instructions,
+                                       onvalue=True, offvalue=False)
     silent_butt.pack(side="left", fill='x')
     instructions_butt.pack(side="left", fill='x')
 
     # Action row
     action_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
     action_frame.pack(fill='x')
-    R.raw_path_label = tk.Label(action_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT, bg=bg_color)
+    R.raw_path_label = tk.Label(action_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT,
+                                bg=bg_color)
     R.raw_path_label.pack(side="right", fill='x')
     action_label = tk.Label(action_frame, text="Intermediate=", bg=bg_color)
     action_label.pack(side="right", fill='x')
