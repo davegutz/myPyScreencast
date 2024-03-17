@@ -26,7 +26,11 @@ from threading import Thread
 import tkinter.simpledialog
 import tkinter.messagebox
 from myGmail import *
-from pynput.keyboard import Key, Controller
+import sys
+if sys.version_info < (3, 12):
+    import pyautogui
+else:
+    from pynput.keyboard import Key, Controller
 import pyperclip
 import platform
 import smtplib
@@ -322,9 +326,11 @@ class FFmpegThread(Thread):
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
-                keyboard = Controller()
-                keyboard.press(Key.f5)  # Attempt to exit fullscreen
-                tk.messagebox.showinfo(title='Screencast', message=msg)
+                if sys.version_info < (3, 12):
+                    keyboard = Controller()
+                    keyboard.press(Key.f5)  # Attempt to exit fullscreen
+                else:
+                    pyautogui.press('F5')  # Attempt to exit fullscreen                tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
         else:
             print('aborting recording....need to enter title.  Presently = ', R.title)
@@ -659,11 +665,20 @@ def stay_awake(up_set_min=3.):
     # Timer starts
     start_time = float(time.time())
     up_time_min = 0.0
+    if sys.version_info < (3, 12):
+        # FAILSAFE to FALSE feature is enabled by default so that you can easily stop execution of
+        # your pyautogui program by manually moving the mouse to the upper left corner of the screen.
+        # Once the mouse is in this location, pyautogui will throw an exception and exit.
+        pyautogui.FAILSAFE = False
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
-        keyboard = Controller()
+        if sys.version_info > (3, 11):
+            keyboard = Controller()
         for i in range(0, 3):
-            keyboard.press(Key.shift)  # Shift key does not disturb fullscreen
+            if sys.version_info > (3, 11):
+                keyboard.press(Key.shift)  # shift key does not disturb fullscreen
+            else:
+                pyautogui.press('shift')  # Shift key does not disturb fullscreen
         up_time_min = (time.time() - start_time) / 60.
         print(f"stay_awake: {up_time_min=}")
     print(f"stay_awake: ending")
