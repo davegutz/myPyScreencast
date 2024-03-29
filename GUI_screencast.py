@@ -363,6 +363,8 @@ def cast_countdown():
         return
     msg = 'Counting down'
     countdown_time.set(countdown_time.get() - 1)
+    print(f"{msg=}")
+    print(f"{countdown_time.get()=}")
     counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
         counter.deiconify()
@@ -686,6 +688,7 @@ def sync():
 
 
 def sync_clip():
+    print(f"{raw_clip_path.get()=}")
     if size_of(raw_clip_path.get()) > 0:
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_clip_path.get(),
@@ -741,7 +744,7 @@ if __name__ == '__main__':
                             "audio_in": 'default',
                             "silent": '1',
                             "instructions": '1',
-                            "video_delay": '0.0'},
+                            "video_delay": '0.5'},
                 'Windows': {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
                             "title": '<enter title>',
