@@ -98,6 +98,7 @@ class Global:
         self.stop_clip_butt = myButton(owner)
         self.clip_cut_butt = myButton(owner)
         self.out_path_label = tk.Label()
+        self.window = None
 
     def update(self):
         self.out_path_label.config(text=R.out_file)
@@ -326,11 +327,12 @@ class FFmpegThread(Thread):
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
-                if sys.version_info < (3, 12):
+                if sys.version_info > (3, 11):
                     keyboard = Controller()
                     keyboard.press(Key.f5)  # Attempt to exit fullscreen
                 else:
-                    pyautogui.press('F5')  # Attempt to exit fullscreen                tk.messagebox.showinfo(title='Screencast', message=msg)
+                    pyautogui.press('F5')  # Attempt to exit fullscreen
+                tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
         else:
             print('aborting recording....need to enter title.  Presently = ', R.title)
@@ -522,12 +524,17 @@ def handle_silent(*_args):
 
 
 def open_tuner_window():
-    tuner_window = tk.Toplevel(root, bg=bg_color)
-    tuner_window.title("Tuner")
-    # tuner_window.geometry("700x200")
+    if tuners.window is not None:
+        print(f"Tuner already open")
+        tuners.window.lift()
+        return
+
+    tuners.window = tk.Toplevel(root, bg=bg_color)
+    tuners.window.title("Tuner")
+    # tuners.window.geometry("700x200")
 
     # Video delay row
-    video_delay_tuner_frame = tk.Frame(tuner_window, bg=box_color, bd=4, relief=relief)
+    video_delay_tuner_frame = tk.Frame(tuners.window, bg=box_color, bd=4, relief=relief)
     video_delay_tuner_frame.pack(side=tk.TOP)
     vd_label = tk.Label(video_delay_tuner_frame, text="Video delay +/-", bg=bg_color)
     tuners.video_delay_tuner_butt = myButton(video_delay_tuner_frame, text=video_delay.get(),
@@ -536,7 +543,7 @@ def open_tuner_window():
     tuners.video_delay_tuner_butt.pack(side="left", fill='x')
 
     # Clipcut row
-    clipcut_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    clipcut_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     clipcut_frame.pack(side=tk.TOP)
     clipcut_label = tk.Label(clipcut_frame, text="Clip range, minutes:", bg=bg_color)
     tuners.start_clip_butt = myButton(clipcut_frame, text=start_clip.get(),
@@ -550,7 +557,7 @@ def open_tuner_window():
     tuners.hms_label.pack(side="left", fill='x')
 
     # Raw unsync row
-    raw_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    raw_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_frame.pack(fill='x')
     raw_label = tk.Label(raw_frame, text="Raw file=", bg=bg_color)
     tuners.raw_path_label = tk.Label(raw_frame, text=R.raw_path.get(), wraplength=wrap_length, justify=tk.RIGHT)
@@ -559,7 +566,7 @@ def open_tuner_window():
     tuners.raw_path_label.pack(side="left", fill='x')
 
     # Raw clip
-    raw_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    raw_clip_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     raw_clip_frame.pack(side=tk.TOP)
     tuners.clip_cut_butt = myButton(raw_clip_frame, text=" CLIP IT ", command=clip_cut, bg=bg_color, fg='black')
     raw_clip_label = tk.Label(raw_clip_frame, text="Clip file=", bg=bg_color)
@@ -571,7 +578,7 @@ def open_tuner_window():
     tuners.raw_clip_file_label.pack(side="left", fill='x')
 
     # Sync clip
-    sync_clip_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    sync_clip_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_clip_frame.pack(side=tk.TOP)
     tuners.sync_clip_tuner_butt = myButton(sync_clip_frame, text="  SYNC CLIP  ", command=sync_clip, bg=bg_color,
                                            fg='black')
@@ -583,7 +590,7 @@ def open_tuner_window():
     tuners.clip_path_label.pack(side="left", fill='x')
 
     # Sync main
-    sync_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    sync_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_frame.pack(side=tk.TOP)
     tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=sync, bg='red', fg='white')
     sync_label = tk.Label(sync_frame, text="Sync =", bg=bg_color)
@@ -594,7 +601,7 @@ def open_tuner_window():
     tuners.out_path_label.pack(side="left", fill='x')
 
     # Instructions
-    tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
+    tuner_doc_frame = tk.Frame(tuners.window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
     tuner_doc_frame.pack(side=tk.TOP)
     tuner_doc = """Tune for video / audio sync.\n\
     - Set range to be within the length of original video.\n\
@@ -606,6 +613,7 @@ def open_tuner_window():
     handle_clip_path()
     clip_path.trace_add('write', handle_clip_path)
     handle_raw_path()
+    tuners.open = True
 
 
 def paint(tk_object, bg='lightgray', fg='black', activebackground=None, activeforeground=None):
@@ -1001,11 +1009,9 @@ if __name__ == '__main__':
     R.stop_button = myButton(cast_frame, text='****   STOP EARLY  ****', command=R.kill, fg=bg_color, bg=bg_color,
                              wraplength=wrap_length, justify=tk.CENTER)
     tuner_window_butt = myButton(cast_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
-    # print_butt = myButton(cast_frame, text="print vars", command=print_vars, bg=bg_color)
     R.cast_button.pack(side="left", fill='x')
     R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
-    # print_butt.pack(side="right", fill='x')
     counter_status = tk.Label(counter, text="Press START to begin recording")
     counter_status.pack()
 

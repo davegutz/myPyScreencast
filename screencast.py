@@ -36,11 +36,22 @@ def cut_clip(waiting=False, silent=True, conversation=False,
 
     # Initialization
     result_ready = False
+    plate = platform.system()
 
-    command = ('ffmpeg -i "{:s}"'.format(raw_file) +
-               " -ss {:5.2f}".format(start_clip) +
-               " -to {:5.2f}".format(stop_clip) +
-               ' -acodec copy -y "{:s}"'.format(clip_file))
+    # Form the command
+    command = ''
+    if plate == 'Linux':
+        command = ('ffmpeg -ss {:5.2f}'.format(start_clip) +
+                   ' -i "{:s}"'.format(raw_file) +
+                   " -t {:5.2f}".format(stop_clip - start_clip) +
+                   ' -acodec copy -y "{:s}"'.format(clip_file))
+    elif plate == 'Windows' or plate == 'Darwin':
+        command = ('ffmpeg -i "{:s}"'.format(raw_file) +
+                   " -ss {:5.2f}".format(start_clip) +
+                   " -to {:5.2f}".format(stop_clip) +
+                   ' -acodec copy -y "{:s}"'.format(clip_file))
+    else:
+        print(f"kill_ffmpeg: SYS = {plate} unknown")
 
     start_time = timeit.default_timer()
     if silent is False:
@@ -52,8 +63,8 @@ def cut_clip(waiting=False, silent=True, conversation=False,
         if result == -1:
             print(Colors.fg.blue, 'failed.', Colors.reset)
             return None, False
-        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
-              Colors.reset, end='')
+        # print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+        #       Colors.reset, end='')
         result_ready = True
         print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, clip_file, Colors.reset)
     else:
@@ -101,8 +112,8 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
         if result == -1:
             print(Colors.fg.blue, 'failed.', Colors.reset)
             return None, False
-        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
-              Colors.reset, end='')
+        # print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+        #       Colors.reset, end='')
         print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
@@ -244,8 +255,8 @@ def screencast(waiting=False, silent=True, conversation=False,
         if result == -1:
             print(Colors.fg.blue, 'failed.', Colors.reset)
             return None, False
-        print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
-              Colors.reset, end='')
+        # print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
+        #       Colors.reset, end='')
         result_ready = True
         print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
