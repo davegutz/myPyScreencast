@@ -25,5 +25,8 @@ The first run with a new model also loads the model into your '$HOME/.cache' fol
 Open pycharm-community.   Use System interpreter.   Run setuplinux.py.  Edit the .desktop file top
 point to the audio files folder you are using.   It initializes to home.
 
+## Display: what do I set?
+Ubuntu on a workstation worked with ":0.0+0,0"
+Ubuntu on laptop worked with "$DISPLAY" in the second box on the 'Video' line.
 
 [Back to top](../README.md)
