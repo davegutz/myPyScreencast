@@ -162,15 +162,23 @@ class MyRecorder:
         return s
 
     def enter_audio_grab(self):
-        self.audio_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
-                                                    initialvalue=self.audio_grab)
+        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_grab parameter",
+                                           initialvalue=self.audio_grab)
+        if answer is None or answer == ():
+            print('enter operation cancelled')
+            return
+        self.audio_grab = answer
         cf[SYS]['audio_grab'] = self.audio_grab
         cf.save_to_file()
         self.audio_grab_butt.config(text=self.audio_grab)
 
     def enter_audio_in(self):
-        self.audio_in = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter",
-                                                  initialvalue=self.audio_in)
+        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter",
+                                           initialvalue=self.audio_in)
+        if answer is None or answer == ():
+            print('enter operation cancelled')
+            return
+        self.audio_in = answer
         cf[SYS]['audio_in'] = self.audio_in
         cf.save_to_file()
         self.audio_in_butt.config(text=self.audio_in)
@@ -209,15 +217,23 @@ class MyRecorder:
         handle_target_path()
 
     def enter_video_grab(self):
-        self.video_grab = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter",
-                                                    initialvalue=self.video_grab)
+        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter",
+                                           initialvalue=self.video_grab)
+        if answer is None or answer == ():
+            print('enter operation cancelled')
+            return
+        self.video_grab = answer
         cf[SYS]['video_grab'] = self.video_grab
         cf.save_to_file()
         self.video_grab_butt.config(text=self.video_grab)
 
     def enter_video_in(self):
-        self.video_in = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter",
-                                                  initialvalue=self.video_in)
+        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter",
+                                           initialvalue=self.video_in)
+        if answer is None or answer == ():
+            print('enter operation cancelled')
+            return
+        self.video_in = answer
         cf[SYS]['video_in'] = self.video_in
         cf.save_to_file()
         self.video_in_butt.config(text=self.video_in)
@@ -425,36 +441,56 @@ def create_file_txt(option_, unit_, battery_):
 
 
 def enter_crf():
-    crf.set(tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file",
-                                       initialvalue=crf.get()))
+    answer = tk.simpledialog.askinteger(title=__file__, prompt="enter ffmpeg crf, lower is larger file",
+                                        initialvalue=crf.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    crf.set(answer)
     cf[SYS]['crf'] = str(crf.get())
     cf.save_to_file()
     crf_butt.config(text=crf.get())
 
 
 def enter_rec_time():
-    rec_time.set(tk.simpledialog.askfloat(title=__file__, prompt="enter record time, minutes",
-                                          initialvalue=rec_time.get()))
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter record time, minutes",
+                                      initialvalue=rec_time.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    rec_time.set(answer)
     cf[SYS]['rec_time'] = str(rec_time.get())
     cf.save_to_file()
     time_butt.config(text=rec_time.get())
 
 
 def enter_start_clip_time():
-    start_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes",
-                                            initialvalue=start_clip.get()))
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter clip start, minutes",
+                                      initialvalue=start_clip.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    start_clip.set(answer)
     tuners.start_clip_butt.config(text=start_clip.get())
 
 
 def enter_stop_clip_time():
-    stop_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes",
-                                           initialvalue=stop_clip.get()))
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes",
+                                      initialvalue=stop_clip.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    stop_clip.set(answer)
     tuners.stop_clip_butt.config(text=stop_clip.get())
 
 
 def enter_video_delay():
-    video_delay.set(float(tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-",
-                                                   initialvalue=video_delay.get())))
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-",
+                                      initialvalue=video_delay.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    video_delay.set(float(answer))
     cf[SYS]['video_delay'] = str(video_delay.get())
     cf.save_to_file()
     video_delay_butt.config(text=str(video_delay.get()))
