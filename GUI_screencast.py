@@ -48,17 +48,18 @@ global putty_shell
 class Begini(ConfigParser):
     """Begini - configuration class using .ini files"""
     def __init__(self, name, def_dict_):
+        login = os.getlogin()
         ConfigParser.__init__(self)
         (config_path, config_basename) = os.path.split(name)
         if sys.platform == 'linux':
             config_txt = os.path.splitext(config_basename)[0] + '_linux.ini'
-            self.config_path = os.path.join('/home/daveg/.local/', config_txt)
+            self.config_path = os.path.join(f'/home/{login}/.local/', config_txt)
         elif sys.platform == 'darwin':
             config_txt = os.path.splitext(config_basename)[0] + '_macos.ini'
-            self.config_path = os.path.join('/Users/daveg/.local/', config_txt)
+            self.config_path = os.path.join(f'/Users/{login}/.local/', config_txt)
         else:
             config_txt = os.path.splitext(config_basename)[0] + '.ini'
-            self.config_path = os.path.join('/home/daveg/.local/', config_txt)
+            self.config_path = os.path.join(f'/home/{login}/.local/', config_txt)
         print('config file', self.config_path)
         if os.path.isfile(self.config_path):
             self.read(self.config_path)
