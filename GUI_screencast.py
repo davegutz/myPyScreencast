@@ -59,7 +59,7 @@ class Begini(ConfigParser):
             self.config_path = os.path.join(f'/Users/{login}/.local/', config_txt)
         else:
             config_txt = os.path.splitext(config_basename)[0] + '.ini'
-            self.config_path = os.path.join(f'/home/{login}/.local/', config_txt)
+            self.config_path = os.path.join(os.getenv('LOCALAPPDATA'), config_txt)
         print('config file', self.config_path)
         if os.path.isfile(self.config_path):
             self.read(self.config_path)
