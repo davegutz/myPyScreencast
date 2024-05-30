@@ -50,28 +50,28 @@ class Begini(ConfigParser):
     def __init__(self, name, def_dict_):
         login = os.getlogin()
         ConfigParser.__init__(self)
-        (config_path, config_basename) = os.path.split(name)
+        (config_file_path, config_basename) = os.path.split(name)
         if sys.platform == 'linux':
             config_txt = os.path.splitext(config_basename)[0] + '_linux.ini'
-            self.config_path = os.path.join(f'/home/{login}/.local/', config_txt)
+            self.config_file_path = os.path.join('/home/daveg/.local/', config_txt)
         elif sys.platform == 'darwin':
             config_txt = os.path.splitext(config_basename)[0] + '_macos.ini'
-            self.config_path = os.path.join(f'/Users/{login}/.local/', config_txt)
+            self.config_file_path = os.path.join('/Users/daveg/.local/', config_txt)
         else:
             config_txt = os.path.splitext(config_basename)[0] + '.ini'
-            self.config_path = os.path.join(os.getenv('LOCALAPPDATA'), config_txt)
-        print('config file', self.config_path)
-        if os.path.isfile(self.config_path):
-            self.read(self.config_path)
+            self.config_file_path = os.path.join(os.getenv('LOCALAPPDATA'), config_txt)
+        print('config file path', self.config_file_path)
+        if os.path.isfile(self.config_file_path):
+            self.read(self.config_file_path)
         else:
-            with open(self.config_path, 'w') as cfg_file:
+            with open(self.config_file_path, 'w') as cfg_file:
                 self.read_dict(def_dict_)
                 self.write(cfg_file)
-            print('wrote', self.config_path)
+            print('wrote', self.config_file_path)
 
     def __str__(self, prefix=''):
         s = prefix + "begini:\n"
-        s += "  config_path =  {:s}\n".format(self.config_path)
+        s += "  config_file_path =  {:s}\n".format(self.config_file_path)
         return s
 
     # Get an item
@@ -85,7 +85,7 @@ class Begini(ConfigParser):
 
     # Save again
     def save_to_file(self):
-        with open(self.config_path, 'w') as cfg_file:
+        with open(self.config_file_path, 'w') as cfg_file:
             self.write(cfg_file)
 
 
