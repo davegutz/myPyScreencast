@@ -24,30 +24,32 @@ test_cmd_copy = None
 
 # Create executable
 if sys.platform == 'linux':
-    test_cmd_create = "pyinstaller ./GUI_screencast.py --hidden-import='PIL._tkinter_finder' --icon='screencast.ico' -y"
+    # test_cmd_create = "pyinstaller ./GUI_screencast.py --hidden-import='PIL._tkinter_finder' --icon='screencast.ico' -y"
+    pass
 elif sys.platform == 'darwin':
-    print("simplified...wait for green comments")
+    pass
 else:
     test_cmd_create = 'pyinstaller .\\GUI_screencast.py --i screencast.ico -y'
 
 if sys.platform == 'linux':
-    screencast_path = os.path.join(os.getcwd(), 'screencast.png')
-    screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'screencast.png')
-    GUI_screencast_path = os.path.join(os.getcwd(), 'GUI_screencast_Icon.png')
-    GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'GUI_screencast.png')
-    result = run_shell_cmd(test_cmd_create, silent=False)
-    if result == -1:
-        print(Colors.fg.red, 'failed', Colors.reset)
-        exit(1)
-    else:
-        print(Colors.fg.green, 'success', Colors.reset)
-
-    # Provide dependencies
-    shutil.copyfile(screencast_path, screencast_dest_path)
-    shutil.copystat(screencast_path, screencast_dest_path)
-    shutil.copyfile(GUI_screencast_path, GUI_screencast_dest_path)
-    shutil.copystat(GUI_screencast_path, GUI_screencast_dest_path)
-    print(Colors.fg.green, "copied files", Colors.reset)
+    # screencast_path = os.path.join(os.getcwd(), 'screencast.png')
+    # screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'screencast.png')
+    # GUI_screencast_path = os.path.join(os.getcwd(), 'GUI_screencast_Icon.png')
+    # GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'GUI_screencast.png')
+    # result = run_shell_cmd(test_cmd_create, silent=False)
+    # if result == -1:
+    #     print(Colors.fg.red, 'failed', Colors.reset)
+    #     exit(1)
+    # else:
+    #     print(Colors.fg.green, 'success', Colors.reset)
+    #
+    # # Provide dependencies
+    # shutil.copyfile(screencast_path, screencast_dest_path)
+    # shutil.copystat(screencast_path, screencast_dest_path)
+    # shutil.copyfile(GUI_screencast_path, GUI_screencast_dest_path)
+    # shutil.copystat(GUI_screencast_path, GUI_screencast_dest_path)
+    # print(Colors.fg.green, "copied files", Colors.reset)
+    pass
 elif sys.platform == 'win32':
     result = run_shell_cmd(test_cmd_create, silent=False)
     if result == -1:
