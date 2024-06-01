@@ -301,10 +301,11 @@ class MyRecorder:
             paint(self.folder_butt, bg='lightgreen')
         else:
             paint(self.folder_butt, bg='pink')
-        if size_of(self.target_path.get()) > 0:
-            paint(self.title_butt, bg='yellow')
-        else:
-            paint(self.title_butt, bg=bg_color)
+        if self.title != '<enter title>':
+            if size_of(self.target_path.get()) > 0:
+                paint(self.title_butt, bg='yellow')
+            else:
+                paint(self.title_butt, bg=bg_color)
         if os.path.exists(self.destination_folder):
             paint(self.destination_folder_butt, bg='lightgreen')
         else:
