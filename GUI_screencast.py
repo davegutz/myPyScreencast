@@ -1,3 +1,4 @@
+#! /Users/daveg/Documents/GitHub/myStateOfCharge/SOC_Particle/py/venv/bin/python3.12
 #  Graphical interface to screencast R
 #  Run in PyCharm
 #     or
