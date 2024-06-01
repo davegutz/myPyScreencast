@@ -24,24 +24,10 @@ test_cmd_copy = None
 
 # Create executable
 if sys.platform == 'linux':
-    # test_cmd_create = "pyinstaller ./GUI_screencast.py --hidden-import='PIL._tkinter_finder' --icon='screencast.ico' -y"
-    pass
-elif sys.platform == 'darwin':
-    pass
-else:
-    test_cmd_create = 'pyinstaller .\\GUI_screencast.py --i screencast.ico -y'
-
-if sys.platform == 'linux':
     # screencast_path = os.path.join(os.getcwd(), 'screencast.png')
     # screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'screencast.png')
     # GUI_screencast_path = os.path.join(os.getcwd(), 'GUI_screencast_Icon.png')
     # GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'GUI_screencast.png')
-    # result = run_shell_cmd(test_cmd_create, silent=False)
-    # if result == -1:
-    #     print(Colors.fg.red, 'failed', Colors.reset)
-    #     exit(1)
-    # else:
-    #     print(Colors.fg.green, 'success', Colors.reset)
     #
     # # Provide dependencies
     # shutil.copyfile(screencast_path, screencast_dest_path)
@@ -51,6 +37,7 @@ if sys.platform == 'linux':
     # print(Colors.fg.green, "copied files", Colors.reset)
     pass
 elif sys.platform == 'win32':
+    test_cmd_create = 'pyinstaller .\\GUI_screencast.py --i screencast.ico -y'
     result = run_shell_cmd(test_cmd_create, silent=False)
     if result == -1:
         print(Colors.fg.red, 'failed', Colors.reset)
@@ -71,14 +58,15 @@ elif sys.platform == 'win32':
 
 # Install as deeply as possible
 test_cmd_install = None
+login = os.getlogin()
 if sys.platform == 'linux':
 
     # Install
-    desktop_entry = """[Desktop Entry]
+    desktop_entry = f"""[Desktop Entry]
 Name=GUI_screencast
-Exec=/home/daveg/Documents/GitHub/movie_Scraper/dist/GUI_screencast/GUI_screencast
-Path=/home/daveg/Documents/GitHub/movie_Scraper/dist/GUI_screencast
-Icon=/home/daveg/Documents/GitHub/movie_Scraper/screencast.ico
+Exec=/home/{login}/Documents/GitHub/myPyScreencast/venv/bin/python3.12 /home/{login}/Documents/GitHub/myPyScreencast/GUI_screencast.py
+Path=/home/{login}/Documents/GitHub/myPyScreencast
+Icon=/home/{login}/Documents/GitHub/myPyScreencast/screencast.ico
 comment=app
 Type=Application
 Terminal=true
