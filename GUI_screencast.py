@@ -1,4 +1,6 @@
-#! /Users/daveg/Documents/GitHub/myStateOfCharge/SOC_Particle/py/venv/bin/python3.12
+#! /bin/sh
+"exec" "`dirname $0`/venv/bin/python3" "$0" "$@"
+##! /Users/daveg/Documents/GitHub/myStateOfCharge/SOC_Particle/py/venv/bin/python3.12
 #  Graphical interface to screencast R
 #  Run in PyCharm
 #     or
