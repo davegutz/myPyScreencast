@@ -23,20 +23,7 @@ test_cmd_create = None
 test_cmd_copy = None
 
 # Create executable
-if sys.platform == 'linux':
-    # screencast_path = os.path.join(os.getcwd(), 'screencast.png')
-    # screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'screencast.png')
-    # GUI_screencast_path = os.path.join(os.getcwd(), 'GUI_screencast_Icon.png')
-    # GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', 'GUI_screencast.png')
-    #
-    # # Provide dependencies
-    # shutil.copyfile(screencast_path, screencast_dest_path)
-    # shutil.copystat(screencast_path, screencast_dest_path)
-    # shutil.copyfile(GUI_screencast_path, GUI_screencast_dest_path)
-    # shutil.copystat(GUI_screencast_path, GUI_screencast_dest_path)
-    # print(Colors.fg.green, "copied files", Colors.reset)
-    pass
-elif sys.platform == 'win32':
+if sys.platform == 'win32':
     test_cmd_create = 'pyinstaller .\\GUI_screencast.py --i screencast.ico -y'
     result = run_shell_cmd(test_cmd_create, silent=False)
     if result == -1:
@@ -60,8 +47,6 @@ elif sys.platform == 'win32':
 test_cmd_install = None
 login = os.getlogin()
 if sys.platform == 'linux':
-
-    # Install
     desktop_entry = f"""[Desktop Entry]
 Name=GUI_screencast
 Exec=/home/{login}/Documents/GitHub/myPyScreencast/venv/bin/python3 /home/{login}/Documents/GitHub/myPyScreencast/GUI_screencast.py

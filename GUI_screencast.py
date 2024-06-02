@@ -1,6 +1,7 @@
 #! /bin/sh
 "exec" "`dirname $0`/venv/bin/python3" "$0" "$@"
 ##! /Users/daveg/Documents/GitHub/myStateOfCharge/SOC_Particle/py/venv/bin/python3.12
+# The #! operates for macOS only. 'Python Launcher' (Python Script Preferences) option for 'Allow override with #! in script' is checked.
 #  Graphical interface to screencast R
 #  Run in PyCharm
 #     or
