@@ -64,7 +64,7 @@ if sys.platform == 'linux':
     # Install
     desktop_entry = f"""[Desktop Entry]
 Name=GUI_screencast
-Exec=/home/{login}/Documents/GitHub/myPyScreencast/venv/bin/python3.12 /home/{login}/Documents/GitHub/myPyScreencast/GUI_screencast.py
+Exec=/home/{login}/Documents/GitHub/myPyScreencast/venv/bin/python3 /home/{login}/Documents/GitHub/myPyScreencast/GUI_screencast.py
 Path=/home/{login}/Documents/GitHub/myPyScreencast
 Icon=/home/{login}/Documents/GitHub/myPyScreencast/screencast.ico
 comment=app
