@@ -31,7 +31,8 @@ import tkinter.simpledialog
 import tkinter.messagebox
 from myGmail import *
 import sys
-if sys.version_info < (3, 12):
+
+if sys.version_info.major == 3 and sys.version_info.minor < 12:
     import pyautogui
 else:
     from pynput.keyboard import Key, Controller
@@ -355,7 +356,7 @@ class FFmpegThread(Thread):
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
-                if sys.version_info > (3, 11):
+                if sys.version_info.major == 3 and sys.version_info.minor > 11:
                     keyboard = Controller()
                     keyboard.press(Key.f5)  # Attempt to exit fullscreen
                 else:
@@ -723,17 +724,17 @@ def stay_awake(up_set_min=3.):
     # Timer starts
     start_time = float(time.time())
     up_time_min = 0.0
-    if sys.version_info < (3, 12):
+    if sys.version_info.major == 3 and sys.version_info.minor < 12:
         # FAILSAFE to FALSE feature is enabled by default so that you can easily stop execution of
         # your pyautogui program by manually moving the mouse to the upper left corner of the screen.
         # Once the mouse is in this location, pyautogui will throw an exception and exit.
         pyautogui.FAILSAFE = False
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
-        if sys.version_info > (3, 11):
+        if sys.version_info.major == 3 and sys.version_info.minor > 11:
             keyboard = Controller()
         for i in range(0, 3):
-            if sys.version_info > (3, 11):
+            if sys.version_info.major == 3 and sys.version_info.minor > 11:
                 keyboard.press(Key.shift)  # shift key does not disturb fullscreen
             else:
                 pyautogui.press('shift')  # Shift key does not disturb fullscreen
