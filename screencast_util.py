@@ -140,7 +140,6 @@ def check_install_ffmpeg(pure_python=True, verbose=False):
 # Check installation status of python
 def check_install_python(platform, verbose=False):
     have_python = False
-    have_pip = False
     if platform == 'Darwin':
         test_cmd_python = 'python3 --version'
     elif platform == 'Windows':
@@ -162,9 +161,11 @@ def check_install_python(platform, verbose=False):
         if result == -1 or ver_no < 3 or rel_no < 6:
             print(Colors.fg.red, 'failed')
             if ver_no < 3:
-                print("System '", test_cmd_python, "' command points to version<3.  myPyScreencast needs 3", Colors.reset)
+                print("System '", test_cmd_python, "' command points to version<3.  myPyScreencast needs 3",
+                      Colors.reset)
             if rel_no < 6:
-                print("System '", test_cmd_python, "' command points to release<6.  myPyScreencast needs >=6", Colors.reset)
+                print("System '", test_cmd_python, "' command points to release<6.  myPyScreencast needs >=6",
+                      Colors.reset)
         else:
             have_python = True
             print('success')

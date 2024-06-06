@@ -38,7 +38,8 @@ if sys.platform == 'win32':
     shutil.copyfile(screencast_path, screencast_dest_path)
     shutil.copystat(screencast_path, screencast_dest_path)
     GUI_screencast_path = os.path.join(os.getcwd(), 'GUI_screencast_Icon.png')
-    GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', '_internal', 'GUI_screencast_Icon.png')
+    GUI_screencast_dest_path = os.path.join(os.getcwd(), 'dist', 'GUI_screencast', '_internal',
+                                            'GUI_screencast_Icon.png')
     shutil.copyfile(GUI_screencast_path, GUI_screencast_dest_path)
     shutil.copystat(GUI_screencast_path, GUI_screencast_dest_path)
     print(Colors.fg.green, "copied files", Colors.reset)
@@ -105,12 +106,14 @@ Categories=Utility
         print(Colors.fg.green, "you shouldn't have to remake shortcuts", Colors.reset)
 elif sys.platform == 'darwin':
     print(Colors.fg.green,
-          f"Make sure 'Python Launcher' (Python Script Preferences) option for 'Allow override with #! in script' is checked.\n"
+          f"Make sure 'Python Launcher' (Python Script Preferences) option for 'Allow override with #!"
+          f" in script' is checked.\n"
           f"in Finder ctrl-click on 'GUI_screencast.py'\n"
           f"   - Open and copy icon into paste buffer.\n"
           f"   - Then 'Get Info' on the duplicate, click on 2nd icon, paste.   Drag item to taskbar.",
           Colors.reset)
 else:
-    print(Colors.fg.green, f"Browse to dist/GUI_screencast.  Make shortcut of .exe and move to Desktop.\ndouble-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar",
+    print(Colors.fg.green, f"Browse to dist/GUI_screencast.  Make shortcut of .exe and move to Desktop.\n"
+                           f"double-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar",
           Colors.reset)
     print(Colors.fg.green, "you shouldn't have to remake shortcuts", Colors.reset)
