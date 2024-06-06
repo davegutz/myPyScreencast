@@ -547,7 +547,7 @@ if __name__ == '__main__':
                             "title":  '<enter title>',
                             "rec_time": '0.1',
                             "crf": '25',
-                            "video_grab": 'x11grab',
+                            "video_grab": 'libxcb',
                             "video_in": ':0.0+0.0',
                             "audio_grab": 'pulse',
                             "audio_in": 'default',

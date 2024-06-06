@@ -73,7 +73,7 @@ def check_install(platform):
 
     # Check status
     if platform == 'Darwin' or platform == 'Windows' or platform == 'Linux':
-        (have_python, have_pip) = check_install_python(platform)
+        have_python = check_install_python(platform)
         have_ffmpeg = check_install_ffmpeg(pure_python)
         have_ffmpeg_windows = False
         if platform == 'Windows':
@@ -86,11 +86,8 @@ def check_install(platform):
 
         # python help
         if not have_python:
+            print('need python help')
             python_help(platform)
-
-        # pip help
-        if not have_pip:
-            pip_help(platform)
 
         # ffmpeg help:
         if platform == 'Windows':
@@ -102,7 +99,7 @@ def check_install(platform):
         # All good
         # #########Interim don't worry about macOS
         # If we have_python and have_pip and have_whisper and have_ffmpeg:
-        if have_python and have_pip and (have_ffmpeg or (platform == 'Windows' and have_ffmpeg_windows)):
+        if have_python and (have_ffmpeg or (platform == 'Windows' and have_ffmpeg_windows)):
             return 0
         else:
             return -1
@@ -130,7 +127,7 @@ def check_install_ffmpeg(pure_python=True, verbose=False):
             print("checking for {:s}...".format(test_cmd), end='')
         have = run_shell_cmd(test_cmd, silent=True)
     if have == -1:
-        print(Colors.fg.red, 'failed')
+        print(Colors.fg.red, f'failed.  Using {pure_python=}')
         print(Colors.fg.green, 'Install ffmpeg', Colors.reset)
         have_ffmpeg = False
     else:
@@ -146,13 +143,10 @@ def check_install_python(platform, verbose=False):
     have_pip = False
     if platform == 'Darwin':
         test_cmd_python = 'python3 --version'
-        test_cmd_pip = 'python3 -m pip --version'
     elif platform == 'Windows':
         test_cmd_python = 'python --version'
-        test_cmd_pip = 'python -m pip --version'
     elif platform == 'Linux':
         test_cmd_python = 'python3 --version'
-        test_cmd_pip = 'python3 -m pip --version'
     else:
         raise Exception('platform unknown.   Contact your administrator')
     if verbose:
@@ -174,16 +168,7 @@ def check_install_python(platform, verbose=False):
         else:
             have_python = True
             print('success')
-    if verbose:
-        print("checking for {:s}...".format(test_cmd_pip), end='')
-    result = run_shell_cmd(test_cmd_pip, silent=True, save_stdout=True)
-    if result == -1:
-        print(Colors.fg.red, 'failed', Colors.reset)
-    else:
-        have_pip = True
-        if verbose:
-            print('success')
-    return have_python, have_pip
+    return have_python
 
 
 # Config helper function

@@ -100,7 +100,7 @@ Categories=Utility
     if result != '/usr/share/applications/GUI_screencast.desktop':
         print(Colors.fg.red, f"'mv ...' failed code {result}", Colors.reset)
     else:
-        print(Colors.fg.green, 'mv success.  Browse apps :: and make it favorites.  Open and set path to dataReduction',
+        print(Colors.fg.green, 'mv success.  Browse apps :: and make it favorites.  Open and set paths',
               Colors.reset)
         print(Colors.fg.green, "you shouldn't have to remake shortcuts", Colors.reset)
 elif sys.platform == 'darwin':

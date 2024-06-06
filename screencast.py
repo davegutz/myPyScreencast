@@ -53,7 +53,7 @@ def cut_clip(waiting=False, silent=True, conversation=False,
     else:
         print(f"kill_ffmpeg: SYS = {plate} unknown")
 
-    start_time = timeit.default_timer()
+    # start_time = timeit.default_timer()
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -94,7 +94,8 @@ def cut_clip(waiting=False, silent=True, conversation=False,
 def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
     print(f"{delay=} {input_file=} {output_file=} {silent=}")
 
-    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0 -map 1:v:0 -y output_sync.mkv'
+    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0
+    # -map 1:v:0 -y output_sync.mkv'
 
     command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
@@ -102,7 +103,7 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
                ' -c:v copy -map 0:v:0 -map 1:a:0 ' +
                ' -y "{:s}"'.format(output_file))
 
-    start_time = timeit.default_timer()
+    # start_time = timeit.default_timer()
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -151,7 +152,8 @@ def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 def length_of(input_file: str, silent=True, save_stdout=True):
 
     # String together the ffmpeg command
-    command = 'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{:s}"'.format(input_file)
+    command = ('ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{:s}"'.
+               format(input_file))
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -245,7 +247,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                    " -t {:5.1f} -y ".format(rec_time) +
                    ' "{:s}"'.format(output_file))
 
-    start_time = timeit.default_timer()
+    # start_time = timeit.default_timer()
     if silent is False:
         print(command + '\n')
         print(Colors.bg.brightblack, Colors.fg.wheat)
@@ -301,7 +303,7 @@ if __name__ == '__main__':
             else:
                 sync_delay = 0.0
         elif plate == 'Linux':
-            video_grabber = "x11grab"
+            video_grabber = "libxcb"
             video_in = ":0.0+0,0"
             audio_grabber = 'pulse'
             audio_in = 'default'
@@ -323,8 +325,6 @@ if __name__ == '__main__':
         else:
             print(f"unknown platform {platform}")
             exit(-1)
-        # result_ready = True
-        # raw_file = os.path.join(os.getcwd(), 'screencast.mkv')
         raw_file, result_ready = screencast(silent=False,
                                             video_grabber=video_grabber, video_in=video_in,
                                             audio_grabber=audio_grabber, audio_in=audio_in,
