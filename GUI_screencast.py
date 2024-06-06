@@ -813,7 +813,7 @@ if __name__ == '__main__':
                             "video_grab": 'x11grab',
                             "video_in": '$DISPLAY',
                             "audio_grab": 'pulse',
-                            "audio_in": 'default',
+                            "audio_in": '<run "ffmpeg -sources pulse" choose "Monitor of Loopback">',
                             "silent": '0',
                             "instructions": '0',
                             "video_delay": '0.5'},
