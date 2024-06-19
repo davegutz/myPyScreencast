@@ -909,6 +909,7 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title('Screencast')
     root.wm_minsize(width=min_width, height=main_height)
+    root.iconphoto(False, tk.PhotoImage(file='screencast.png'))
     counter = tk.Tk()
     counter.attributes('-topmost', True)
     thread_active = tk.IntVar(root, 0)
