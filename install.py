@@ -93,17 +93,23 @@ Categories=Utility
         result = shutil.move('/home/daveg/Desktop/GUI_screencast.desktop',
                              '/usr/share/applications/GUI_screencast.desktop')
     except PermissionError:
-        print(Colors.fg.red, f"Stop and establish sudo permissions", Colors.reset)
-        print(Colors.fg.red, f"  or", Colors.reset)
-        print(Colors.fg.red, f"sudo mv /home/daveg/Desktop/GUI_screencast.desktop /usr/share/applications/.",
+        print(Colors.fg.red,
+              f"Stop and establish sudo permissions"
+              f"  or"
+              f"sudo mv /home/daveg/Desktop/GUI_screencast.desktop /usr/share/applications/.",
               Colors.reset)
         exit(1)
     if result != '/usr/share/applications/GUI_screencast.desktop':
-        print(Colors.fg.red, f"'mv ...' failed code {result}", Colors.reset)
-    else:
-        print(Colors.fg.green, 'mv success.  Browse apps :: and make it favorites.  Open and set paths',
+        print(Colors.fg.red,
+              f"'mv ...' failed code {result}",
               Colors.reset)
-        print(Colors.fg.green, "you shouldn't have to remake shortcuts", Colors.reset)
+    else:
+        print(Colors.fg.green,
+              'mv success.  Browse apps :: and make it favorites.  Open and set paths',
+              Colors.reset)
+        print(Colors.fg.green,
+              "you shouldn't have to remake shortcuts",
+              Colors.reset)
 elif sys.platform == 'darwin':
     print(Colors.fg.green,
           f"Make sure 'Python Launcher' (Python Script Preferences) option for 'Allow override with #! in script' is checked.\n"
@@ -111,7 +117,9 @@ elif sys.platform == 'darwin':
           f"in Finder ctrl-click on 'GUI_screencast.py'\n"
           f"   - 'Get Info', click on 2nd icon, paste.   Drag item to taskbar.", Colors.reset)
 else:
-    print(Colors.fg.green, f"Browse to dist/GUI_screencast.  Make shortcut of .exe and move to Desktop.\n"
-                           f"double-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar",
+    print(Colors.fg.green,
+          f"Browse to dist/GUI_screencast.  Make shortcut of .exe and move to Desktop.\n"
+          f"double-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar"
+          f"in shortcut properties, make sure 'Start in:' is this folder where this script resides"
+          f"you shouldn't have to remake shortcuts",
           Colors.reset)
-    print(Colors.fg.green, "you shouldn't have to remake shortcuts", Colors.reset)
