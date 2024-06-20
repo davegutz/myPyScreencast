@@ -94,8 +94,8 @@ Categories=Utility
                              '/usr/share/applications/GUI_screencast.desktop')
     except PermissionError:
         print(Colors.fg.red,
-              f"Stop and establish sudo permissions"
-              f"  or"
+              f"Stop and establish sudo permissions\n"
+              f"  or\n"
               f"sudo mv /home/daveg/Desktop/GUI_screencast.desktop /usr/share/applications/.",
               Colors.reset)
         exit(1)
@@ -113,13 +113,13 @@ Categories=Utility
 elif sys.platform == 'darwin':
     print(Colors.fg.green,
           f"Make sure 'Python Launcher' (Python Script Preferences) option for 'Allow override with #! in script' is checked.\n"
-          f"in Finder double-click on 'screencast.png'.  Edit-copy the image"
+          f"in Finder double-click on 'screencast.png'.  Edit-copy the image\n"
           f"in Finder ctrl-click on 'GUI_screencast.py'\n"
           f"   - 'Get Info', click on 2nd icon, paste.   Drag item to taskbar.", Colors.reset)
 else:
     print(Colors.fg.green,
           f"Browse to dist/GUI_screencast.  Make shortcut of .exe and move to Desktop.\n"
-          f"double-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar"
-          f"in shortcut properties, make sure 'Start in:' is this folder where this script resides"
+          f"double-click on  'GUI_screencast.exe - Shortcut', set paths on buttons, pin to taskbar\n"
+          f"in shortcut properties, make sure 'Start in:' is this folder where this script resides\n"
           f"you shouldn't have to remake shortcuts",
           Colors.reset)
