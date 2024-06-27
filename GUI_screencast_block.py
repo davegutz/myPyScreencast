@@ -648,7 +648,7 @@ if __name__ == '__main__':
     root.wm_minsize(width=min_width, height=main_height)
     counter = tk.Tk()
     counter.attributes('-topmost', True)
-    countdown_time = tk.IntVar(root, 8)
+    countdown_time = tk.IntVar(root, 11)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
