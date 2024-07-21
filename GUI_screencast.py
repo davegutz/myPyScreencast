@@ -809,7 +809,7 @@ if __name__ == '__main__':
                             "destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
                             "rec_time": '0.1',
-                            "crf": '25',
+                            "crf": '29',
                             "video_grab": 'x11grab',
                             "video_in": '$DISPLAY',
                             "audio_grab": 'pulse',

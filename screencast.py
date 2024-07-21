@@ -307,7 +307,7 @@ if __name__ == '__main__':
             video_in = ":0.0+0,0"
             audio_grabber = 'pulse'
             audio_in = 'default'
-            crf = 25
+            crf = 29
             if sync_delay != '':
                 print("user requested sync delay '{:s}'".format(sync_delay))
             else:

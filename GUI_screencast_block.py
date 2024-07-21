@@ -546,7 +546,7 @@ if __name__ == '__main__':
                             "destination_folder": '<enter destination folder>',
                             "title":  '<enter title>',
                             "rec_time": '0.1',
-                            "crf": '25',
+                            "crf": '29',
                             "video_grab": 'libxcb',
                             "video_in": ':0.0+0.0',
                             "audio_grab": 'pulse',
