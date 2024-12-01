@@ -23,6 +23,7 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
+from screencast_util import run_shell_cmd
 from configparser import ConfigParser
 from datetime import timedelta
 from tkinter import filedialog
@@ -184,9 +185,13 @@ class MyRecorder:
         cf.save_to_file()
         self.audio_grab_butt.config(text=self.audio_grab)
 
-    def enter_audio_in(self):
-        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter",
-                                           initialvalue=self.audio_in)
+    def enter_audio_in(self, suggested=None):
+        if suggested is not None:
+            answer = tk.simpledialog.askstring(title=__file__, prompt="suggested ffmpeg audio_in parameter\t\t\t\t\nPress 'Cancel' to ignore this",
+                                               initialvalue=suggested)
+        else:
+            answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg audio_in parameter",
+                                               initialvalue=self.audio_in)
         if answer is None or answer == ():
             print('enter operation cancelled')
             return
@@ -375,6 +380,14 @@ def add_to_clip_board(text):
 
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
+    if sys.platform == 'linux':
+        test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep 'Monitor of Loopback' | awk '{print $1}'"
+        pulse_audio_loopback = run_shell_cmd(test_cmd, save_stdout=True, silent=True)
+        pulse_audio_loopback = pulse_audio_loopback[0].strip()
+        if R.audio_in != pulse_audio_loopback:
+            print(f"{R.audio_in=}\n  not equal to \n{pulse_audio_loopback=}")
+            print(f"To correct this copy and paste last line into next window or cancel to ignore")
+            R.enter_audio_in(pulse_audio_loopback)
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
     if confirmation is False:
         return
