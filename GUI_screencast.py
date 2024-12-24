@@ -381,7 +381,7 @@ def add_to_clip_board(text):
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
     if sys.platform == 'linux':
-        test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep 'Monitor of Loopback' | awk '{print $1}'"
+        test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep output | grep Loopback | awk '{print $1}'"
         pulse_audio_loopback = run_shell_cmd(test_cmd, save_stdout=True, silent=True)
         pulse_audio_loopback = pulse_audio_loopback[0].strip()
         if R.audio_in != pulse_audio_loopback:
