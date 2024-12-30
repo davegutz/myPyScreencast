@@ -402,7 +402,7 @@ def record():
             print('aborting recording....need to enter title.  Presently = ', title.get())
 
 
-def send_message(email=my_email, password=my_app_password, to=my_text, subject='undefined', message='undefined'):
+def send_message(email=my_email, password=my_app_password, to=my_email_target, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
     try:
         # Only for gmail account.
