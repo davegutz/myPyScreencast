@@ -15,14 +15,16 @@ import os
 
 # input
 title = 'test'
+linux_display = ':1'
+probe_size = '42M'
 def_dict = {
- 'Linux': {"folder": '<enter working folder>',
+ 'linux': {"folder": '<enter working folder>',
            "destination_folder": '/home/daveg/Videos',
            "title": title,
            "rec_time": '0.1',
            "crf": '29',
            "video_grab": 'x11grab',
-           "video_in": '$DISPLAY',
+           "video_in": linux_display,
            "audio_grab": 'pulse',
            "audio_in": 'alsa_output.platform-snd_aloop.0.analog-stereo.monitor',
            "silent": '0',
@@ -55,7 +57,6 @@ def_dict = {
 }
 
 SYS = sys.platform
-
 folder = def_dict[SYS]['folder']
 destination_folder = def_dict[SYS]['destination_folder']
 title = def_dict[SYS]['title']
@@ -68,51 +69,40 @@ audio_grab = def_dict[SYS]['audio_grab']
 video_delay = float(def_dict[SYS]['video_delay'])
 vcodec = 'libx264'
 pix_fmt = 'yuv420p'
-target_path = os.path.join(destination_folder, title)
-
-input_video_params = {
- 'filename': video_in,
- 'f': video_grab,
-}
-
-input_audio_params = {
- # 'audio': audio_in,
- 'filename': audio_in,
- 'i': audio_in,
- 'f': audio_grab,
-}
-
-# output
-output_params = {
- 'vcodec': vcodec,
- 'pix_fmt': pix_fmt,
- 'crf': crf,
- 't': rec_time,
- 'y': '',  # overwrite output files without asking
-}
-
-# Do the work
-video_input = ffmpeg.input(**input_video_params)
-audio_input = ffmpeg.input(**input_audio_params)
-output = ffmpeg.output(video_input, audio_input, target_path, **output_params)
-ffmpeg.run(output)
+output_path = os.path.join(destination_folder, title + '.mp4')
+print(f"{output_path=}")
 
 
-# ffmpeg.input(display, f='x11grab', i=audio, codec=
-#
-# ffmpeg.input("input.mp4", ss=start_time, to=end_time)
-# ffmpeg.input("input.mp4", ss="00:00:15")
-# 	.filter('thumbnail')
-# 	.filter('thumbnail', n=300)
-# 	.output("thumbnail_filter_2.png")
-# 	.output('frame_%d.png', vframes=3)
-# 	.output('frame%d.png', vf='fps=1')
-#     .output('audio.mp3', acodec='libshine')
-#     .output('frame%d.png', vf='fps=1')
-#     .run()
-# ffmpeg.__dir__()
-# ['__name__', '__doc__', '__package__', '__loader__', '__spec__', '__path__', '__file__', '__cached__', '__builtins__',
-#  'unicode_literals', '_utils', 'dag', 'nodes', '_ffmpeg', '_filters', '_run', '_probe', '_view', 'Stream', 'input',
-#  'merge_outputs', 'output', 'overwrite_output', 'colorchannelmixer', 'concat', 'crop', 'drawbox', 'drawtext', 'filter',
-#  'filter_', 'filter_multi_output', 'hflip', 'hue', 'overlay', 'setpts', 'trim', 'vflip', 'zoompan', 'probe',
-#  'compile', 'Error', 'get_args', 'run', 'run_async', 'view', '__all__']
+
+
+
+def main():
+    # Constructs
+    input_video_params = {
+        'filename': video_in,
+        'f': video_grab,
+        'probesize': probe_size,
+    }
+    input_audio_params = {
+        'filename': 'audio',
+        # 'i': audio_in,
+        'f': audio_grab,
+    }
+    # output
+    output_params = {
+        'vcodec': vcodec,
+        'pix_fmt': pix_fmt,
+        'crf': crf,
+        't': rec_time,
+        # 'y': '',  # overwrite output files without asking
+    }
+
+    # Do the work
+    video_input = ffmpeg.input(**input_video_params)
+    audio_input = ffmpeg.input(**input_audio_params)
+    output = ffmpeg.concat(video_input, audio_input, v=1, a=1).output(output_path, **output_params)
+    ffmpeg.run(output)
+
+
+if __name__ == "__main__":
+    main()
