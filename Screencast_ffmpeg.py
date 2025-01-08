@@ -36,7 +36,7 @@ def_dict = {
              "video_grab": "gdigrab",
              "video_in": 'desktop',
              "audio_grab": 'dshow',
-             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
+             "audio_in": "audio='CABLE Output (VB-Audio Virtual Cable)'",
              "silent": '0',
              "instructions": '0',
              "video_delay": '0.0'},
@@ -76,7 +76,9 @@ input_video_params = {
 }
 
 input_audio_params = {
+ # 'audio': audio_in,
  'filename': audio_in,
+ 'i': audio_in,
  'f': audio_grab,
 }
 
