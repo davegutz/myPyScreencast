@@ -89,6 +89,7 @@ Categories=Utility
         print(Colors.fg.green, 'chmod success', Colors.reset)
 
     # Move file
+    # exit(1)
     try:
         result = shutil.move('/home/daveg/Desktop/GUI_screencast.desktop',
                              '/usr/share/applications/GUI_screencast.desktop')
