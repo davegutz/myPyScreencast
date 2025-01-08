@@ -94,14 +94,13 @@ def main():
         'pix_fmt': pix_fmt,
         'crf': crf,
         't': rec_time,
-        # 'y': '',  # overwrite output files without asking
     }
 
     # Do the work
     video_input = ffmpeg.input(**input_video_params)
     audio_input = ffmpeg.input(**input_audio_params)
     output = ffmpeg.concat(video_input, audio_input, v=1, a=1).output(output_path, **output_params)
-    ffmpeg.run(output)
+    ffmpeg.run(output, overwrite_output=True)
 
 
 if __name__ == "__main__":
