@@ -1,0 +1,93 @@
+ffmpeg -threads 4 -f gdigrab -probesize 42M -thread_queue_size 1024 -i desktop -f dshow -thread_queue_size 1024 -i audio="CABLE Output (VB-Audio Virtual Cable)" -vcodec libx264  -pix_fmt yuv420p -crf 28 -t   6.0 -y  "C:/Users/daveg/Videos\testGUI_raw.mp4"
+
+
+
+
+
+
+ 
+ffmpeg version 2023-04-30-git-e7c690a046-full_build-www.gyan.dev Copyright (c) 2000-2023 the FFmpeg developers
+  built with gcc 12.2.0 (Rev10, Built by MSYS2 project)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libuavs3d --enable-libzvbi --enable-librav1e --enable-libsvtav1 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxvid --enable-libaom --enable-libjxl --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-ffnvcodec --enable-nvdec --enable-nvenc --enable-d3d11va --enable-dxva2 --enable-libvpl --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint
+  libavutil      58.  6.100 / 58.  6.100
+  libavcodec     60. 10.100 / 60. 10.100
+  libavformat    60.  5.100 / 60.  5.100
+  libavdevice    60.  2.100 / 60.  2.100
+  libavfilter     9.  7.100 /  9.  7.100
+  libswscale      7.  2.100 /  7.  2.100
+  libswresample   4. 11.100 /  4. 11.100
+  libpostproc    57.  2.100 / 57.  2.100
+[gdigrab @ 0000018ca0812c40] Capturing whole desktop as 3840x1080x32 at (0,0)
+Input #0, gdigrab, from 'desktop':
+  Duration: N/A, start: 1736443532.166496, bitrate: 3977347 kb/s
+  Stream #0:0: Video: bmp, bgra, 3840x1080, 3977347 kb/s, 29.97 fps, 31 tbr, 1000k tbn
+[aist#1:0/pcm_s16le @ 0000018ca085c900] Guessed Channel Layout: stereo
+Input #1, dshow, from 'audio=CABLE Output (VB-Audio Virtual Cable)':
+  Duration: N/A, start: 4296.778000, bitrate: 1411 kb/s
+  Stream #1:0: Audio: pcm_s16le, 44100 Hz, 2 channels, s16, 1411 kb/s
+Stream mapping:
+  Stream #0:0 -> #0:0 (bmp (native) -> h264 (libx264))
+  Stream #1:0 -> #0:1 (pcm_s16le (native) -> aac (native))
+  
+  
+Press [q] to stop, [?] for help
+[libx264 @ 0000018ca085e980] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0000018ca085e980] profile High, level 5.0, 4:2:0, 8-bit
+[libx264 @ 0000018ca085e980] 264 - core 164 r3107 a8b68eb - H.264/MPEG-4 AVC codec - Copyleft 2003-2023 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=24 lookahead_threads=4 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=25 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=28.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to 'C:/Users/daveg/Videos\testGUI_raw.mp4':
+  Metadata:
+    encoder         : Lavf60.5.100
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(tv, progressive), 3840x1080, q=2-31, 31 fps, 15872 tbn
+    Metadata:
+      encoder         : Lavc60.10.100 libx264
+    Side data:
+      cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+  Stream #0:1: Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 128 kb/s
+    Metadata:
+      encoder         : Lavc60.10.100 aac
+Message sent
+frame=    0 fps=0.0 q=0.0 size=       0kB time=00:00:00.41 bitrate=   0.9kbits/s speed=6.02x    
+frame=    0 fps=0.0 q=0.0 size=       0kB time=00:00:00.94 bitrate=   0.4kbits/s dup=21 drop=0 speed= 1.5x    
+frame=    0 fps=0.0 q=0.0 size=       0kB time=00:00:01.43 bitrate=   0.3kbits/s dup=22 drop=0 speed=1.26x    
+frame=    0 fps=0.0 q=0.0 size=       0kB time=00:00:01.94 bitrate=   0.2kbits/s dup=22 drop=1 speed=1.15x    
+frame=    0 fps=0.0 q=0.0 size=       0kB time=00:00:02.43 bitrate=   0.2kbits/s dup=22 drop=1 speed=1.11x    
+frame=   11 fps=4.1 q=34.0 size=     256kB time=00:00:02.94 bitrate= 712.1kbits/s dup=23 drop=1 speed=1.09x    
+frame=   27 fps=8.5 q=34.0 size=     256kB time=00:00:03.43 bitrate= 610.9kbits/s dup=26 drop=1 speed=1.07x    
+frame=   43 fps= 12 q=34.0 size=     256kB time=00:00:03.94 bitrate= 531.7kbits/s dup=28 drop=1 speed=1.07x    
+frame=   58 fps= 14 q=34.0 size=     256kB time=00:00:04.43 bitrate= 473.2kbits/s dup=30 drop=1 speed=1.05x    
+frame=   73 fps= 15 q=34.0 size=     512kB time=00:00:04.94 bitrate= 848.5kbits/s dup=32 drop=1 speed=1.05x    
+frame=   89 fps= 17 q=34.0 size=     512kB time=00:00:05.43 bitrate= 772.3kbits/s dup=34 drop=1 speed=1.04x    
+frame=  105 fps= 18 q=34.0 size=     512kB time=00:00:05.91 bitrate= 708.7kbits/s dup=36 drop=1 speed=1.03x    
+[out#0/mp4 @ 0000018ca085d500] video:905kB audio:94kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.777972%
+frame=  186 fps= 29 q=-1.0 Lsize=    1007kB time=00:00:05.98 bitrate=1377.0kbits/s dup=37 drop=1 speed=0.94x    
+
+
+
+
+
+
+
+
+[libx264 @ 0000018ca085e980] frame I:1     Avg QP:24.25  size:271601
+[libx264 @ 0000018ca085e980] frame P:50    Avg QP:25.25  size: 11249
+[libx264 @ 0000018ca085e980] frame B:135   Avg QP:33.38  size:   683
+[libx264 @ 0000018ca085e980] consecutive B-frames:  1.6%  4.3%  1.6% 92.5%
+[libx264 @ 0000018ca085e980] mb I  I16..4: 28.6% 42.5% 28.9%
+[libx264 @ 0000018ca085e980] mb P  I16..4:  1.5%  1.8%  0.8%  P16..4:  3.6%  0.5%  0.4%  0.0%  0.0%    skip:91.4%
+[libx264 @ 0000018ca085e980] mb B  I16..4:  0.1%  0.1%  0.0%  B16..8:  3.6%  0.1%  0.0%  direct: 0.0%  skip:96.1%  L0:51.5% L1:47.7% BI: 0.8%
+[libx264 @ 0000018ca085e980] 8x8 transform intra:44.4% inter:68.0%
+[libx264 @ 0000018ca085e980] coded y,uvDC,uvAC intra: 23.6% 31.7% 23.2% inter: 0.2% 0.3% 0.1%
+[libx264 @ 0000018ca085e980] i16 v,h,dc,p: 43% 51%  2%  4%
+[libx264 @ 0000018ca085e980] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 26% 20% 45%  1%  1%  1%  2%  1%  3%
+[libx264 @ 0000018ca085e980] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 31% 29% 17%  3%  3%  4%  5%  4%  4%
+[libx264 @ 0000018ca085e980] i8c dc,h,v,p: 62% 27%  9%  2%
+[libx264 @ 0000018ca085e980] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 0000018ca085e980] ref P L0: 66.1% 11.7% 15.7%  6.5%
+[libx264 @ 0000018ca085e980] ref B L0: 81.9% 15.5%  2.5%
+[libx264 @ 0000018ca085e980] ref B L1: 94.8%  5.2%
+[libx264 @ 0000018ca085e980] kb/s:1234.97
+[aac @ 0000018ca0862140] Qavg: 238.889
+
+ffmpeg -threads 4 -f gdigrab -probesize 42M -thread_queue_size 1024 -i desktop -f dshow -thread_queue_size 1024 -i audio="CABLE Output (VB-Audio Virtual Cable)" -vcodec libx264  -pix_fmt yuv420p -crf 28 -t   6.0 -y  "C:/Users/daveg/Videos\testGUI_raw.mp4"
+
+   The result is in   C:/Users/daveg/Videos\testGUI_raw.mp4 
