@@ -86,8 +86,6 @@ frame=  186 fps= 29 q=-1.0 Lsize=    1007kB time=00:00:05.98 bitrate=1377.0kbits
 [libx264 @ 0000018ca085e980] ref B L0: 81.9% 15.5%  2.5%
 [libx264 @ 0000018ca085e980] ref B L1: 94.8%  5.2%
 [libx264 @ 0000018ca085e980] kb/s:1234.97
+
 [aac @ 0000018ca0862140] Qavg: 238.889
-
-ffmpeg -threads 4 -f gdigrab -probesize 42M -thread_queue_size 1024 -i desktop -f dshow -thread_queue_size 1024 -i audio="CABLE Output (VB-Audio Virtual Cable)" -vcodec libx264  -pix_fmt yuv420p -crf 28 -t   6.0 -y  "C:/Users/daveg/Videos\testGUI_raw.mp4"
-
    The result is in   C:/Users/daveg/Videos\testGUI_raw.mp4 
