@@ -24,8 +24,8 @@
 
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
 from screencast_util import run_shell_cmd
+from datetime import datetime, timedelta
 from configparser import ConfigParser
-from datetime import timedelta
 from tkinter import filedialog
 from threading import Thread
 import tkinter.simpledialog
@@ -337,8 +337,10 @@ class FFmpegThread(Thread):
         if R.title != '<enter title>' and R.title != '' and R.title != 'None':
             thread_active.set(thread_active.get()+1)
             print('sending message')
-            thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': 'Starting ' +
-                                                                                        str(rec_time.get())})
+            curr_time = datetime.now()
+            end_time = curr_time + timedelta(minutes=rec_time.get())
+            thread = Thread(target=send_message, kwargs={'subject': R.title,
+                'message': 'Starting with duration ' + str(rec_time.get()) + end_time.strftime(" minutes.  Finishing ~%H:%M")})
             thread.start()
             rf, rr = screencast(silent=silent.get(),
                                 video_grabber=R.video_grab, video_in=R.video_in,
