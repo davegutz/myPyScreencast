@@ -340,7 +340,7 @@ class FFmpegThread(Thread):
             curr_time = datetime.now()
             end_time = curr_time + timedelta(minutes=rec_time.get())
             thread = Thread(target=send_message, kwargs={'subject': R.title,
-                'message': 'Starting with duration ' + str(rec_time.get()) + end_time.strftime(" minutes.  Finishing ~%H:%M")})
+                'message': end_time.strftime(" Finishing ~%H:%M")})
             thread.start()
             rf, rr = screencast(silent=silent.get(),
                                 video_grabber=R.video_grab, video_in=R.video_in,
