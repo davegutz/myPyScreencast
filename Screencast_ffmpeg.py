@@ -7,7 +7,7 @@ from fileinput import filename
 
 # ffmpeg -threads 4 -f gdigrab -probesize 42M -thread_queue_size 1024 -i desktop -f dshow -thread_queue_size 1024 -i audio="CABLE Output (VB-Audio Virtual Cable)" # -vcodec libx264  -pix_fmt yuv420p -crf 28 -t   6.0 -y  "C:/Users/daveg/Videos\test_raw.mp4"
 
-import ffmpeg
+import ffmpeg  # install ffmpeg-python
 import sys
 import os
 
