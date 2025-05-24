@@ -349,6 +349,9 @@ class FFmpegThread(Thread):
                                 rec_time=rec_time.get()*60.,
                                 output_file=R.raw_path.get())
             R.running = False
+            # Drop out of fullscreen and stop to help keep !Machine working
+            pyautogui.press('esc')
+            pyautogui.press('space')
             if rf is not None and rr is True:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
