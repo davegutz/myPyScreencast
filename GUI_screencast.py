@@ -420,7 +420,7 @@ def cast_countdown():
     countdown_time.set(countdown_time.get() - 1)
     print(f"{msg=}")
     print(f"{countdown_time.get()=}")
-    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
+    # counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
         counter.deiconify()
         counter.lift()
@@ -715,6 +715,7 @@ def print_vars():
 
 def send_message(email=my_email, password=my_app_password, to=my_email_target, subject='undefined', message='undefined'):
     """Sends email from 'email' to 'to'"""
+    print(f"{email=} {password=} {to=} {subject=} {message=}")
     try:
         # Only for gmail account.
         with smtplib.SMTP('smtp.gmail.com:587') as server:
