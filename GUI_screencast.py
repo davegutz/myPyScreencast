@@ -350,8 +350,15 @@ class FFmpegThread(Thread):
                                 output_file=R.raw_path.get())
             R.running = False
             # Drop out of fullscreen and stop to help keep !Machine working
-            pyautogui.press('esc')
-            pyautogui.press('space')
+            if sys.version_info.major == 3 and sys.version_info.minor > 11:
+                keyboard = Controller()
+                keyboard.press(Key.f5)  # Attempt to exit fullscreen
+                keyboard.press(Key.esc)  # Attempt to exit fullscreen
+                keyboard.press(Key.space)  # Attempt to stop play
+            else:
+                pyautogui.press('F5')  # Attempt to exit fullscreen
+                pyautogui.press('esc')  # Attempt to exit fullscreen
+                pyautogui.press('space')  # Attempt to stop play
             if rf is not None and rr is True:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
