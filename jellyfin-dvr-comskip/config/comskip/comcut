@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -x
+
+echo "top"
 
 #LD_LIBRARY_PATH is set and will mess up ffmpeg, unset it, then re-set it when done
 ldPath=${LD_LIBRARY_PATH}
@@ -9,6 +10,8 @@ exitcode=0
 
 ffmpegPath="ffmpeg"
 comskipPath="comskip"
+
+echo "$# -lt 1"
 
 if [[ $# -lt 1 ]]; then
 
@@ -24,16 +27,19 @@ fi
 
 comskipini=$HOME/.comskip.ini
 
-deleteedl=true
-deletemeta=true
-deletelog=true
-deletelogo=true
-deletetxt=true
+deleteedl=false
+deletemeta=false
+deletelog=false
+deletelogo=false
+deletetxt=false
 lockfile=""
 workdir=""
 
+echo "at while $# -gt 0"
+
 while [[ $# -gt 0 ]]
 do
+echo "top while $# -gt 0"
 key="$1"
 case $key in
     --keep-edl)
@@ -137,7 +143,6 @@ logfile="$workdir${infile%.*}.log"
 logofile="$workdir${infile%.*}.logo.txt"
 txtfile="$workdir${infile%.*}.txt"
 fi
-
 
 if [ ! -f "$edlfile" ]; then
   $comskipPath $comskipoutput --ini="$comskipini" "$infile"
