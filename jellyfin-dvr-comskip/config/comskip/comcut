@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-echo "top"
-
 #LD_LIBRARY_PATH is set and will mess up ffmpeg, unset it, then re-set it when done
 ldPath=${LD_LIBRARY_PATH}
 unset LD_LIBRARY_PATH
@@ -10,8 +8,6 @@ exitcode=0
 
 ffmpegPath="ffmpeg"
 comskipPath="comskip"
-
-echo "$# -lt 1"
 
 if [[ $# -lt 1 ]]; then
 
@@ -35,11 +31,8 @@ deletetxt=false
 lockfile=""
 workdir=""
 
-echo "at while $# -gt 0"
-
 while [[ $# -gt 0 ]]
 do
-echo "top while $# -gt 0"
 key="$1"
 case $key in
     --keep-edl)
