@@ -778,8 +778,12 @@ def sync():
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
                              output_file=R.out_path)
         if size_of(R.out_path) > 0:
-            shutil.move(R.out_path, R.target_path.get())
-            print("Moved synchronized result to ", R.target_path.get())
+            try:
+                shutil.move(R.out_path, R.target_path.get())
+                print("Moved synchronized result to ", R.target_path.get())
+            except FileNotFoundError:
+                print(f"is Lib drive plugged in?????????")
+                tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
         update_all_file_paths()
     else:
         print("record first *******")
