@@ -735,6 +735,9 @@ def send_message(email=my_email, password=my_app_password, to=my_email_target, s
             print('Message sent')
     except Exception as e:
         print("send_message failed:", e)
+        msg = "You need a new app password: Google - Manage account - Security - 2-step verification - App passwords - 'gmail' -->myGmail.py"
+        print(msg)
+        tk.messagebox.showinfo(title='ERROR', message=msg)
 
 
 def size_of(path):
