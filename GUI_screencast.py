@@ -353,8 +353,11 @@ class FFmpegThread(Thread):
             if sys.version_info.major == 3 and sys.version_info.minor > 11:
                 keyboard = Controller()
                 keyboard.press(Key.f5)  # Attempt to exit fullscreen
+                keyboard.release(Key.f5)  # Attempt to exit fullscreen
                 keyboard.press(Key.esc)  # Attempt to exit fullscreen
+                keyboard.release(Key.esc)  # Attempt to exit fullscreen
                 keyboard.press(Key.space)  # Attempt to stop play
+                keyboard.release(Key.space)  # Attempt to stop play
             else:
                 pyautogui.press('F5')  # Attempt to exit fullscreen
                 pyautogui.press('esc')  # Attempt to exit fullscreen
@@ -376,6 +379,7 @@ class FFmpegThread(Thread):
                 if sys.version_info.major == 3 and sys.version_info.minor > 11:
                     keyboard = Controller()
                     keyboard.press(Key.f5)  # Attempt to exit fullscreen
+                    keyboard.release(Key.f5)  # Attempt to exit fullscreen
                 else:
                     pyautogui.press('F5')  # Attempt to exit fullscreen
                 tk.messagebox.showinfo(title='Screencast', message=msg)
@@ -765,6 +769,7 @@ def stay_awake(up_set_min=3.):
         for i in range(0, 3):
             if sys.version_info.major == 3 and sys.version_info.minor > 11:
                 keyboard.press(Key.shift)  # shift key does not disturb fullscreen
+                keyboard.release(Key.shift)  # shift key does not disturb fullscreen
             else:
                 pyautogui.press('shift')  # Shift key does not disturb fullscreen
         up_time_min = (time.time() - start_time) / 60.
