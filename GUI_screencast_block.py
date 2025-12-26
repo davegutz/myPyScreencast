@@ -446,7 +446,7 @@ def start_countdown():
 
 
 def stay_awake(up_set_min=3.):
-    """Keep computer awake using shift key when recording then return to previous state"""
+    """Keep computer awake using f15 key when recording then return to previous state"""
 
     # Timer starts
     start_time = float(time.time())
@@ -458,7 +458,7 @@ def stay_awake(up_set_min=3.):
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
         for i in range(0, 3):
-            pyautogui.press('shift')  # Shift key does not disturb fullscreen
+            pyautogui.press('f15')  # f15 key does not disturb fullscreen
         up_time_min = (time.time() - start_time) / 60.
         print(f"stay_awake: {up_time_min=}")
     print(f"stay_awake: ending")
@@ -595,7 +595,7 @@ if __name__ == '__main__':
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
       That is done outside this program.
-    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
+    - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
     elif SYS == 'Windows':
         doc = """Screencast (Windows):  RECORD while a video is playing full screen.\n \
     - Get yourself ready to run the system entirely on one display (unplug the other).\n \
@@ -611,7 +611,7 @@ if __name__ == '__main__':
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
       That is done outside this program.
-    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
+    - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
     elif SYS == 'Darwin':
         doc = """Screencast (MacOS):  RECORD while a video is playing on Opera.\n \
     - The MacOS version has choppy continuity and stutters (cause TBD).
@@ -628,7 +628,7 @@ if __name__ == '__main__':
       Framerate is hard-coded.\n\
     - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
       That is done outside this program.
-    - There is no need to start 'caffeine' or equivalent as this app will press the shift key while recording."""
+    - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
     else:
         print('os unknown')
 
