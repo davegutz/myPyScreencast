@@ -36,7 +36,13 @@ import sys
 if sys.version_info.major == 3 and sys.version_info.minor < 12:
     import pyautogui
 else:
-    from pynput.keyboard import Key, Controller
+    try:
+        import evdev
+        from evdev import UInput, ecodes as ev
+        _kb_backend = 'evdev'
+    except ImportError:
+        from pynput.keyboard import Key, Controller
+        _kb_backend = 'pynput'
 import pyperclip
 import platform
 import smtplib
@@ -351,13 +357,36 @@ class FFmpegThread(Thread):
             R.running = False
             # Drop out of fullscreen and stop to help keep !Machine working
             if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                keyboard = Controller()
-                keyboard.press(Key.f5)  # Attempt to exit fullscreen
-                keyboard.release(Key.f5)  # Attempt to exit fullscreen
-                keyboard.press(Key.esc)  # Attempt to exit fullscreen
-                keyboard.release(Key.esc)  # Attempt to exit fullscreen
-                keyboard.press(Key.space)  # Attempt to stop play
-                keyboard.release(Key.space)  # Attempt to stop play
+                # keyboard = Controller()
+                # keyboard.press(Key.f5)  # Attempt to exit fullscreen
+                # keyboard.release(Key.f5)  # Attempt to exit fullscreen
+                # keyboard.press(Key.esc)  # Attempt to exit fullscreen
+                # keyboard.release(Key.esc)  # Attempt to exit fullscreen
+                # keyboard.press(Key.space)  # Attempt to stop play
+                # keyboard.release(Key.space)  # Attempt to stop play
+                with evdev.UInput() as ui:
+                    print(f"Virtual device created: {ui.name}")
+                    print("Pressing f5...")
+                    ui.write(ev.EV_KEY, ev.KEY_F5, 1)
+                    ui.syn()
+                    time.sleep(0.1)
+                    ui.write(ev.EV_KEY, ev.KEY_F5, 0)
+                    ui.syn()
+                    print("F5 pressed.")
+                    print("Pressing esc...")
+                    ui.write(ev.EV_KEY, ev.KEY_ESC, 1)
+                    ui.syn()
+                    time.sleep(0.1)
+                    ui.write(ev.EV_KEY, ev.KEY_ESC, 0)
+                    ui.syn()
+                    print("ESC pressed.")
+                    print("Pressing space...")
+                    ui.write(ev.EV_KEY, ev.KEY_SPACE, 1)
+                    ui.syn()
+                    time.sleep(0.1)
+                    ui.write(ev.EV_KEY, ev.KEY_SPACE, 0)
+                    ui.syn()
+                    print("SPACE pressed.")
             else:
                 pyautogui.press('F5')  # Attempt to exit fullscreen
                 pyautogui.press('esc')  # Attempt to exit fullscreen
@@ -377,9 +406,14 @@ class FFmpegThread(Thread):
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
                 if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                    keyboard = Controller()
-                    keyboard.press(Key.f5)  # Attempt to exit fullscreen
-                    keyboard.release(Key.f5)  # Attempt to exit fullscreen
+                    with evdev.UInput() as ui:
+                        print("Pressing F5...")
+                        ui.write(ev.EV_KEY, ev.KEY_F5, 1)
+                        ui.syn()
+                        time.sleep(0.1)
+                        ui.write(ev.EV_KEY, ev.KEY_F5, 0)
+                        ui.syn()
+                        print("F5 pressed.")
                 else:
                     pyautogui.press('F5')  # Attempt to exit fullscreen
                 tk.messagebox.showinfo(title='Screencast', message=msg)
@@ -764,12 +798,19 @@ def stay_awake(up_set_min=3.):
         pyautogui.FAILSAFE = False
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
-        if sys.version_info.major == 3 and sys.version_info.minor > 11:
-            keyboard = Controller()
+        # if sys.version_info.major == 3 and sys.version_info.minor > 11:
+        #     keyboard = Controller()
         for i in range(0, 3):
             if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                keyboard.press(Key.f15)  # f15 key does not disturb fullscreen
-                keyboard.release(Key.f15)  # f15 key does not disturb fullscreen
+                with evdev.UInput() as ui:
+                    print(f"Virtual device created: {ui.name}")
+                    print("Pressing F15...")
+                    ui.write(ev.EV_KEY, ev.KEY_F15, 1)
+                    ui.syn()
+                    time.sleep(0.1)
+                    ui.write(ev.EV_KEY, ev.KEY_F15, 0)
+                    ui.syn()
+                    print("F15 pressed.")
             else:
                 pyautogui.press('f15')  # f15 key does not disturb fullscreen
         up_time_min = (time.time() - start_time) / 60.

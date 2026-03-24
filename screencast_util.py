@@ -19,7 +19,7 @@ import json
 import inspect
 import subprocess
 import configparser
-import pkg_resources  # setuptools
+import pkg_resources  # setuptools 80.10.2
 from Colors import Colors
 from mbox import MessageBox
 from typing import Callable, TextIO
