@@ -29,7 +29,7 @@ def_dict = {
      "title": title,
      "silent": '0',
      "instructions": '0',
-     "video_delay": '0.5',
+     "video_delay": '-0.3',
  },
  'win32': {
      "video_grab": "gdigrab",
