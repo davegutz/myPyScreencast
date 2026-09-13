@@ -19,7 +19,10 @@ import json
 import inspect
 import subprocess
 import configparser
-import pkg_resources  # setuptools 80.10.2
+try:
+    from importlib.metadata import distribution, PackageNotFoundError
+except ImportError:
+    from importlib_metadata import distribution, PackageNotFoundError
 from Colors import Colors
 from mbox import MessageBox
 from typing import Callable, TextIO
@@ -111,9 +114,11 @@ def check_install(platform):
 def check_install_pkg(pkg, verbose=False):
     if verbose:
         print("checking for {:s}...".format(pkg), end='')
-    installed_packages = pkg_resources.working_set
-    installed_packages_list = sorted(["%s" % i.key for i in installed_packages])
-    return installed_packages_list.__contains__(pkg)
+    try:
+        distribution(pkg)
+        return True
+    except PackageNotFoundError:
+        return False
 
 
 # Check installation status of ffmpeg
