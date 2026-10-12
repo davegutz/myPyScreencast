@@ -17,7 +17,8 @@
 # Lesser General Public License for more details.
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text
-# import os
+import os
+import shutil
 import time
 import timeit
 import platform
@@ -36,6 +37,10 @@ def cut_clip(waiting=False, silent=True, conversation=False,
 
     # Initialization
     result_ready = False
+    if rec_time is not None:
+        rec_time = float(rec_time)
+    else:
+        rec_time = 180.0
     plate = platform.system()
 
     # Form the command
@@ -178,8 +183,8 @@ def length_of(input_file: str, silent=True, save_stdout=True):
 
 def kill_ffmpeg(sys_=None, silent=True):
     command = ''
-    if sys_ == 'Linux':
-        command = 'pkill -e ffmpeg'
+    if sys_ in ('Linux', 'Linux_Wayland') or (sys_ and sys_.startswith('Linux')):
+        command = 'pkill -e -f "(ffmpeg|gpu-screen-recorder|wf-recorder|wl-screenrec)"'
     elif sys_ == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
     elif sys_ == 'Darwin':
@@ -205,13 +210,17 @@ def screencast(waiting=False, silent=True, conversation=False,
                audio_grabber="dshow", audio_in="CABLE Output (VB-Audio Virtual Cable)",
                output_file=None,
                crf=28, rec_time=None):
-    """Wrap the ffmpeg program to make it useful and more portable"""
+    """Wrap the screen recording program to make it useful and portable"""
 
     print(f"{waiting=} {silent=} {conversation=} {video_grabber=} {video_in=} \
 {audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=}")
 
     # Initialization
     result_ready = False
+    if rec_time is not None:
+        rec_time = float(rec_time)
+    else:
+        rec_time = 180.0
 
     if check_install(platform.system()) != 0:
         print(Colors.fg.red, 'Installation problems.   See suggestions a few lines above')
@@ -220,8 +229,47 @@ def screencast(waiting=False, silent=True, conversation=False,
             input('\nEnter anything to close window')
         return result_ready, None
 
-    # Screencast
-    if audio_grabber is None or audio_grabber == '':  # Darwin
+    # Check tool availability for Wayland recording backends
+    if video_grabber == 'gpu-screen-recorder':
+        if not has_gpu_screen_recorder():
+            msg = (f"Wayland recorder '{video_grabber}' was not found.\n"
+                   f"Please install it (e.g. 'sudo apt install wf-recorder' or install gpu-screen-recorder).")
+            print(Colors.fg.red, msg, Colors.reset)
+            messagebox.showerror(title='Recorder Missing', message=msg)
+            return None, False
+    elif video_grabber in ('wf-recorder', 'wl-screenrec'):
+        if not shutil.which(video_grabber):
+            msg = (f"Wayland recorder '{video_grabber}' was not found.\n"
+                   f"Please install it (e.g. 'sudo apt install wf-recorder' or install gpu-screen-recorder).")
+            print(Colors.fg.red, msg, Colors.reset)
+            messagebox.showerror(title='Recorder Missing', message=msg)
+            return None, False
+
+    # Form command based on capture backend
+    if video_grabber == 'gpu-screen-recorder':
+        gsr_cmd = get_gpu_screen_recorder_cmd()
+        if audio_in in ('default', None, '', 'none'):
+            audio_param = '-a default_output'
+        else:
+            audio_param = f'-a "{audio_in}"'
+        w_param = f'-w "{video_in}"' if video_in and video_in != '$DISPLAY' else '-w screen'
+        command = f'timeout {rec_time:5.1f}s {gsr_cmd} {w_param} -f 60 {audio_param} -o "{output_file}"'
+    elif video_grabber == 'wf-recorder':
+        audio_param = f'-a "{audio_in}"' if audio_in and audio_in not in ('', 'none') else '-a'
+        command = f'timeout {rec_time:5.1f}s wf-recorder {audio_param} -f "{output_file}"'
+    elif video_grabber == 'wl-screenrec':
+        command = f'timeout {rec_time:5.1f}s wl-screenrec --audio --filename "{output_file}"'
+    elif video_grabber == 'kmsgrab':
+        command = ("ffmpeg -threads 4" +
+                   " -device /dev/dri/card0 -f kmsgrab -i -" +
+                   " -f {:s}".format(audio_grabber) +
+                   " -thread_queue_size 1024" +
+                   " -i {:s}".format(audio_in) +
+                   " -vf 'hwdownload,format=bgr0'" +
+                   " -vcodec libx264 -pix_fmt yuv420p -crf {:d}".format(crf) +
+                   " -t {:5.1f} -y ".format(rec_time) +
+                   ' "{:s}"'.format(output_file))
+    elif audio_grabber is None or audio_grabber == '':  # Darwin
         command = ("ffmpeg423 -threads 4" +
                    " -f {:s}".format(video_grabber) +
                    " -probesize 42M" +
@@ -303,8 +351,12 @@ if __name__ == '__main__':
             else:
                 sync_delay = 0.0
         elif plate == 'Linux':
-            video_grabber = "libxcb"
-            video_in = ":0.0+0,0"
+            if is_wayland_session():
+                video_grabber = detect_wayland_recorder()
+                video_in = "screen"
+            else:
+                video_grabber = "x11grab"
+                video_in = ":0.0+0,0"
             audio_grabber = 'pulse'
             audio_in = 'default'
             crf = 29

@@ -26,7 +26,12 @@ Open pycharm-community.   Use System interpreter.   Run setuplinux.py.  Edit the
 point to the audio files folder you are using.   It initializes to home.
 
 ## Display: what do I set?
-Ubuntu on a workstation worked with ":0.0+0,0"
-Ubuntu on laptop worked with "$DISPLAY" in the second box on the 'Video' line.
+* **X11 sessions:**
+  * Workstation: `:0.0+0,0`
+  * Laptop: `$DISPLAY` in the second box on the 'Video' line with grabber `x11grab`.
+* **Wayland sessions:**
+  * Screen capture on Wayland uses a dedicated Wayland capture utility:
+    * `gpu-screen-recorder` (recommended for GNOME, KDE, and other desktop environments): set Video grabber to `gpu-screen-recorder` and target to `screen`.
+    * `wf-recorder` (for wlroots/sway/hyprland): `sudo apt install wf-recorder`. Set Video grabber to `wf-recorder`.
 
 [Back to top](../README.md)

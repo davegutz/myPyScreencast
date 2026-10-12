@@ -23,7 +23,7 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
-from screencast_util import run_shell_cmd
+from screencast_util import run_shell_cmd, is_wayland_session, detect_wayland_recorder
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 from tkinter import filedialog
@@ -36,16 +36,28 @@ from myGmail import *
 import sys
 import os
 
-if sys.version_info.major == 3 and sys.version_info.minor < 12:
-    import pyautogui
-else:
+_kb_backend = None
+try:
+    import evdev
+    from evdev import UInput, ecodes as ev
+    _kb_backend = 'evdev'
+except ImportError:
+    pass
+
+if _kb_backend is None:
     try:
-        import evdev
-        from evdev import UInput, ecodes as ev
-        _kb_backend = 'evdev'
-    except ImportError:
         from pynput.keyboard import Key, Controller
         _kb_backend = 'pynput'
+    except ImportError:
+        pass
+
+if _kb_backend is None:
+    try:
+        import pyautogui
+        _kb_backend = 'pyautogui'
+    except ImportError:
+        pass
+
 import pyperclip
 import platform
 import smtplib
@@ -58,6 +70,66 @@ else:
     import tkinter as tk
     from tkinter import Button as myButton
 global putty_shell
+
+
+def press_exit_fullscreen_keys():
+    """Attempt to exit fullscreen and stop play across X11, Wayland, and other platforms."""
+    if _kb_backend == 'evdev':
+        try:
+            with evdev.UInput() as ui:
+                for key in (ev.KEY_F5, ev.KEY_ESC, ev.KEY_SPACE):
+                    ui.write(ev.EV_KEY, key, 1)
+                    ui.syn()
+                    time.sleep(0.1)
+                    ui.write(ev.EV_KEY, key, 0)
+                    ui.syn()
+            return
+        except Exception as e:
+            print(f"evdev exit fullscreen keys failed: {e}")
+    elif _kb_backend == 'pynput':
+        try:
+            keyboard = Controller()
+            for k in (Key.f5, Key.esc, Key.space):
+                keyboard.press(k)
+                keyboard.release(k)
+            return
+        except Exception as e:
+            print(f"pynput exit fullscreen keys failed: {e}")
+    if 'pyautogui' in sys.modules or _kb_backend == 'pyautogui':
+        try:
+            pyautogui.press('F5')
+            pyautogui.press('esc')
+            pyautogui.press('space')
+        except Exception as e:
+            print(f"pyautogui exit fullscreen keys failed: {e}")
+
+
+def press_stay_awake_key():
+    """Press F15 key to prevent sleep / screensaver."""
+    if _kb_backend == 'evdev':
+        try:
+            with evdev.UInput() as ui:
+                ui.write(ev.EV_KEY, ev.KEY_F15, 1)
+                ui.syn()
+                time.sleep(0.1)
+                ui.write(ev.EV_KEY, ev.KEY_F15, 0)
+                ui.syn()
+            return
+        except Exception as e:
+            print(f"evdev stay_awake F15 failed: {e}")
+    elif _kb_backend == 'pynput':
+        try:
+            keyboard = Controller()
+            keyboard.press(Key.f15)
+            keyboard.release(Key.f15)
+            return
+        except Exception as e:
+            pass
+    if 'pyautogui' in sys.modules or _kb_backend == 'pyautogui':
+        try:
+            pyautogui.press('f15')
+        except Exception as e:
+            print(f"pyautogui stay_awake f15 failed: {e}")
 
 
 class Begini(ConfigParser):
@@ -78,6 +150,21 @@ class Begini(ConfigParser):
         print('config file path', self.config_file_path)
         if os.path.isfile(self.config_file_path):
             self.read(self.config_file_path)
+            # Ensure any newly introduced sections/keys are populated
+            updated = False
+            for sec, options in def_dict_.items():
+                if not self.has_section(sec):
+                    self.add_section(sec)
+                    for k, v in options.items():
+                        self.set(sec, k, str(v))
+                    updated = True
+                else:
+                    for k, v in options.items():
+                        if not self.has_option(sec, k):
+                            self.set(sec, k, str(v))
+                            updated = True
+            if updated:
+                self.save_to_file()
         else:
             with open(self.config_file_path, 'w') as cfg_file:
                 self.read_dict(def_dict_)
@@ -243,7 +330,7 @@ class MyRecorder:
         handle_target_path()
 
     def enter_video_grab(self):
-        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_grab parameter",
+        answer = tk.simpledialog.askstring(title=__file__, prompt="video_grab parameter (e.g. gpu-screen-recorder, wf-recorder, x11grab)",
                                            initialvalue=self.video_grab)
         if answer is None or answer == ():
             print('enter operation cancelled')
@@ -254,7 +341,7 @@ class MyRecorder:
         self.video_grab_butt.config(text=self.video_grab)
 
     def enter_video_in(self):
-        answer = tk.simpledialog.askstring(title=__file__, prompt="ffmpeg video_in parameter",
+        answer = tk.simpledialog.askstring(title=__file__, prompt="video_in parameter (e.g. screen, $DISPLAY, :0.0)",
                                            initialvalue=self.video_in)
         if answer is None or answer == ():
             print('enter operation cancelled')
@@ -277,7 +364,7 @@ class MyRecorder:
 
     def kill(self):
         if self.running is not None:
-            kill_ffmpeg(SYS)
+            kill_ffmpeg(self.sys)
             self.cast_button.config(bg="red", fg='black')
             self.stop_button.config(bg=bg_color, fg=bg_color)
             self.running = False
@@ -359,41 +446,7 @@ class FFmpegThread(Thread):
                                 output_file=R.raw_path.get())
             R.running = False
             # Drop out of fullscreen and stop to help keep !Machine working
-            if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                # keyboard = Controller()
-                # keyboard.press(Key.f5)  # Attempt to exit fullscreen
-                # keyboard.release(Key.f5)  # Attempt to exit fullscreen
-                # keyboard.press(Key.esc)  # Attempt to exit fullscreen
-                # keyboard.release(Key.esc)  # Attempt to exit fullscreen
-                # keyboard.press(Key.space)  # Attempt to stop play
-                # keyboard.release(Key.space)  # Attempt to stop play
-                with evdev.UInput() as ui:
-                    print(f"Virtual device created: {ui.name}")
-                    print("Pressing f5...")
-                    ui.write(ev.EV_KEY, ev.KEY_F5, 1)
-                    ui.syn()
-                    time.sleep(0.1)
-                    ui.write(ev.EV_KEY, ev.KEY_F5, 0)
-                    ui.syn()
-                    print("F5 pressed.")
-                    print("Pressing esc...")
-                    ui.write(ev.EV_KEY, ev.KEY_ESC, 1)
-                    ui.syn()
-                    time.sleep(0.1)
-                    ui.write(ev.EV_KEY, ev.KEY_ESC, 0)
-                    ui.syn()
-                    print("ESC pressed.")
-                    print("Pressing space...")
-                    ui.write(ev.EV_KEY, ev.KEY_SPACE, 1)
-                    ui.syn()
-                    time.sleep(0.1)
-                    ui.write(ev.EV_KEY, ev.KEY_SPACE, 0)
-                    ui.syn()
-                    print("SPACE pressed.")
-            else:
-                pyautogui.press('F5')  # Attempt to exit fullscreen
-                pyautogui.press('esc')  # Attempt to exit fullscreen
-                pyautogui.press('space')  # Attempt to stop play
+            press_exit_fullscreen_keys()
             if rf is not None and rr is True:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
@@ -408,17 +461,7 @@ class FFmpegThread(Thread):
                     msg = 'Done but >1 min size difference'
                 thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
                 thread.start()
-                if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                    with evdev.UInput() as ui:
-                        print("Pressing F5...")
-                        ui.write(ev.EV_KEY, ev.KEY_F5, 1)
-                        ui.syn()
-                        time.sleep(0.1)
-                        ui.write(ev.EV_KEY, ev.KEY_F5, 0)
-                        ui.syn()
-                        print("F5 pressed.")
-                else:
-                    pyautogui.press('F5')  # Attempt to exit fullscreen
+                press_exit_fullscreen_keys()
                 tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
         else:
@@ -436,11 +479,12 @@ def cast():
     if sys.platform == 'linux':
         test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep output | grep Loopback | awk '{print $1}'"
         pulse_audio_loopback = run_shell_cmd(test_cmd, save_stdout=True, silent=True)
-        pulse_audio_loopback = pulse_audio_loopback[0].strip()
-        if R.audio_in != pulse_audio_loopback:
-            print(f"{R.audio_in=}\n  not equal to \n{pulse_audio_loopback=}")
-            print(f"To correct this copy and paste last line into next window or cancel to ignore")
-            R.enter_audio_in(pulse_audio_loopback)
+        if pulse_audio_loopback and pulse_audio_loopback != -1 and len(pulse_audio_loopback) > 0:
+            pulse_audio_loopback = pulse_audio_loopback[0].strip()
+            if pulse_audio_loopback and R.audio_in != pulse_audio_loopback:
+                print(f"{R.audio_in=}\n  not equal to \n{pulse_audio_loopback=}")
+                print(f"To correct this copy and paste last line into next window or cancel to ignore")
+                R.enter_audio_in(pulse_audio_loopback)
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
     if confirmation is False:
         return
@@ -794,33 +838,17 @@ def stay_awake(up_set_min=3.):
     # Timer starts
     start_time = float(time.time())
     up_time_min = 0.0
-    if sys.version_info.major == 3 and sys.version_info.minor < 12:
-        # FAILSAFE to FALSE feature is enabled by default so that you can easily stop execution of
-        # your pyautogui program by manually moving the mouse to the upper left corner of the screen.
-        # Once the mouse is in this location, pyautogui will throw an exception and exit.
+    if _kb_backend == 'pyautogui' and 'pyautogui' in sys.modules:
         pyautogui.FAILSAFE = False
     while True and (up_time_min < up_set_min):
         time.sleep(30.)
-        # if sys.version_info.major == 3 and sys.version_info.minor > 11:
-        #     keyboard = Controller()
         for i in range(0, 3):
-            if sys.version_info.major == 3 and sys.version_info.minor > 11:
-                with evdev.UInput() as ui:
-                    print(f"Virtual device created: {ui.name}")
-                    print("Pressing F15...")
-                    ui.write(ev.EV_KEY, ev.KEY_F15, 1)
-                    ui.syn()
-                    time.sleep(0.1)
-                    ui.write(ev.EV_KEY, ev.KEY_F15, 0)
-                    ui.syn()
-                    print("F15 pressed.")
-            else:
-                pyautogui.press('f15')  # f15 key does not disturb fullscreen
+            press_stay_awake_key()
         up_time_min = (time.time() - start_time) / 60.
         print(f"stay_awake: {up_time_min=}")
     print(f"stay_awake: ending")
-        
-        
+
+
 def sync():
     if size_of(R.raw_path.get()) > 0:
         if video_delay.get() >= 0.0:
@@ -924,10 +952,13 @@ def check_git_newer_version(verbose=False):
         if verbose:
             tkinter.messagebox.showerror(title="Git Check Error", message=f"Error checking git version:\n{e}", parent=root)
 
+
 if __name__ == '__main__':
     import os
     import tkinter as tk
     SYS = platform.system()
+    if SYS == 'Linux' and is_wayland_session():
+        SYS = 'Linux_Wayland'
 
     # Configuration for entire folder selection read with filepaths
     def_dict = {
@@ -938,6 +969,18 @@ if __name__ == '__main__':
                             "crf": '29',
                             "video_grab": 'x11grab',
                             "video_in": '$DISPLAY',
+                            "audio_grab": 'pulse',
+                            "audio_in": '<run "ffmpeg -sources pulse" choose "Monitor of Loopback">',
+                            "silent": '0',
+                            "instructions": '0',
+                            "video_delay": '0.5'},
+                'Linux_Wayland': {"folder": '<enter working folder>',
+                            "destination_folder": '<enter destination folder>',
+                            "title":  '<enter title>',
+                            "rec_time": '0.1',
+                            "crf": '29',
+                            "video_grab": detect_wayland_recorder(),
+                            "video_in": 'screen',
                             "audio_grab": 'pulse',
                             "audio_in": '<run "ffmpeg -sources pulse" choose "Monitor of Loopback">',
                             "silent": '0',
@@ -971,51 +1014,95 @@ if __name__ == '__main__':
     cf = Begini(__file__, def_dict)
     doc = ''
     if SYS == 'Linux':
-        doc = """Screencast (Linux):  RECORD while a video is playing full screen.\n \
-    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
-    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'\n\
-    - Press 'RECORD' then go to the video streaming source and make it full screen.\n\
-    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
-      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
-      to extract a 10 - 20 second video from the final to iterate quickly.\n\
-    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
-    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
-    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
-      Framerate is hard-coded.\n\
-    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+        doc = """Screencast (Linux X11):  RECORD while a video is playing full screen.
+ 
+    - Get yourself ready to run the system entirely on one display (unplug the other).
+ 
+    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'
+ 
+    - Press 'RECORD' then go to the video streaming source and make it full screen.
+ 
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window
+      to extract a 10 - 20 second video from the final to iterate quickly.
+ 
+    - The unsynchronized 'intermediate' result is saved to make this easy.
+ 
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.
+ 
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.
+      Framerate is hard-coded.
+ 
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.
       That is done outside this program.
     - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
+    elif SYS == 'Linux_Wayland':
+        doc = """Screencast (Linux Wayland):  RECORD while a video is playing full screen.
+ 
+    - Wayland screen capture requires a Wayland-compatible recorder backend.
+ 
+    - Supported backends: 'gpu-screen-recorder' (recommended for all compositors)
+      or 'wf-recorder' (for wlroots/sway/hyprland).
+ 
+    - If needed, install wf-recorder via 'sudo apt install wf-recorder'
+      or gpu-screen-recorder from https://git.dec05eba.com/gpu-screen-recorder.
+ 
+    - Audio is captured through PulseAudio/PipeWire loopback.
+ 
+    - Keystroke simulation (anti-sleep / exit fullscreen) uses Linux evdev / uinput.
+ 
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.
+      That is done outside this program.
+    - There is no need to start 'caffeine' as this app simulates activity via evdev."""
     elif SYS == 'Windows':
-        doc = """Screencast (Windows):  RECORD while a video is playing full screen.\n \
-    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
-    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.\n\
-    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'\n\
-    - Press 'RECORD' then go to the video streaming source and make it full screen.\n\
-    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
-      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
-      to extract a 10 - 20 second video from the final to iterate quickly.\n\
-    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
-    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
-    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
-      Framerate is hard-coded.\n\
-    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+        doc = """Screencast (Windows):  RECORD while a video is playing full screen.
+ 
+    - Get yourself ready to run the system entirely on one display (unplug the other).
+ 
+    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.
+ 
+    - Open the streaming source and have it all queued to begin, all except for 'fullscreen.'
+ 
+    - Press 'RECORD' then go to the video streaming source and make it full screen.
+ 
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window
+      to extract a 10 - 20 second video from the final to iterate quickly.
+ 
+    - The unsynchronized 'intermediate' result is saved to make this easy.
+ 
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.
+ 
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.
+      Framerate is hard-coded.
+ 
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.
       That is done outside this program.
     - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
     elif SYS == 'Darwin':
-        doc = """Screencast (MacOS):  RECORD while a video is playing on Opera.\n \
+        doc = """Screencast (MacOS):  RECORD while a video is playing on Opera.
+ 
     - The MacOS version has choppy continuity and stutters (cause TBD).
-    - Get yourself ready to run the system entirely on one display (unplug the other).\n \
-    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.\n\
-    - Open the streaming source using the Opera browser and have it all queued to begin.\n\
-    - Press 'RECORD' then go to the video streaming source and make Opera full screen (NOT the streaming source).\n\
-    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)\n\
-      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window\n\
-      to extract a 10 - 20 second video from the final to iterate quickly.\n\
-    - The unsynchronized 'intermediate' result is saved to make this easy.\n\
-    - The 'crf' value is used to set video compression.  Smaller is larger file size.\n\
-    - Framerate is whatever the source is.  This is a common practice in screencast recording.\n\
-      Framerate is hard-coded.\n\
-    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.\n\
+    - Get yourself ready to run the system entirely on one display (unplug the other).
+ 
+    - Open the audio settings and point at 'VB-Audio Virtual Cable' or install it as needed.
+ 
+    - Open the streaming source using the Opera browser and have it all queued to begin.
+ 
+    - Press 'RECORD' then go to the video streaming source and make Opera full screen (NOT the streaming source).
+ 
+    - To tune the video sync delay play the resulting file and determine if the video needs to be delayed (+delay)
+      or advanced (-delay).  Tune the 'Video delay' until happy.   For convenience you may use the 'Tuner' window
+      to extract a 10 - 20 second video from the final to iterate quickly.
+ 
+    - The unsynchronized 'intermediate' result is saved to make this easy.
+ 
+    - The 'crf' value is used to set video compression.  Smaller is larger file size.
+ 
+    - Framerate is whatever the source is.  This is a common practice in screencast recording.
+      Framerate is hard-coded.
+ 
+    - When complete, copy or move the named file from the folder listed at the top left of the GUI to your library.
       That is done outside this program.
     - There is no need to start 'caffeine' or equivalent as this app will press the f15 key while recording."""
     else:
@@ -1053,7 +1140,9 @@ if __name__ == '__main__':
         instructions = tk.BooleanVar(root, False)
     else:
         instructions = tk.BooleanVar(root, True)
-    root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png')))
+    root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+                   if os.path.exists(os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+                   else tk.PhotoImage(file=os.path.join(script_loc, 'screencast.png')))
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
     raw_clip_file = tk.StringVar(root)

@@ -17,6 +17,7 @@ import os
 import sys
 import json
 import inspect
+import shutil
 import subprocess
 import configparser
 try:
@@ -33,6 +34,52 @@ supported = ['.mp3', '.m4a', '.mp4', '.mpeg', '.mpga', '.opus', '.ts', '.voc', '
              '.webm', '.wma', '.wv']
 unsupported = ['.ac3', '.aac', '.aiff', '.au', '.caf', '.flac', '.mp2', '.oga', '.ogg', '.sln']
 unsupported_no_msg = ['.txt', '.pdf', '.py', '.md']
+
+
+def is_wayland_session():
+    """Detect if running in a Wayland graphical session."""
+    if sys.platform != 'linux':
+        return False
+    return bool(os.environ.get('WAYLAND_DISPLAY') or os.environ.get('XDG_SESSION_TYPE') == 'wayland')
+
+
+def has_gpu_screen_recorder():
+    """Check if gpu-screen-recorder is available natively or via flatpak."""
+    if shutil.which('gpu-screen-recorder'):
+        return True
+    if shutil.which('flatpak'):
+        try:
+            res = subprocess.run(['flatpak', 'info', 'com.dec05eba.gpu_screen_recorder'],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return res.returncode == 0
+        except Exception:
+            return False
+    return False
+
+
+def get_gpu_screen_recorder_cmd():
+    """Return the command string to run gpu-screen-recorder."""
+    if shutil.which('gpu-screen-recorder'):
+        return 'gpu-screen-recorder'
+    if shutil.which('flatpak'):
+        try:
+            res = subprocess.run(['flatpak', 'info', 'com.dec05eba.gpu_screen_recorder'],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                return 'flatpak run --command=gpu-screen-recorder com.dec05eba.gpu_screen_recorder'
+        except Exception:
+            pass
+    return 'gpu-screen-recorder'
+
+
+def detect_wayland_recorder():
+    """Detect available screen recorder tool on Wayland."""
+    if has_gpu_screen_recorder():
+        return 'gpu-screen-recorder'
+    for tool in ('wf-recorder', 'wl-screenrec'):
+        if shutil.which(tool):
+            return tool
+    return 'gpu-screen-recorder'
 
 
 def str2bool(string):
@@ -98,6 +145,19 @@ def check_install(platform):
                 screencast_help(platform, have_ffmpeg, have_ffmpeg_windows)
         elif not have_ffmpeg:
             screencast_help(platform, have_ffmpeg, have_ffmpeg_windows)
+
+        # Wayland recorder check
+        if platform == 'Linux' and is_wayland_session():
+            rec = detect_wayland_recorder()
+            have_rec = False
+            if rec == 'gpu-screen-recorder':
+                have_rec = has_gpu_screen_recorder()
+            else:
+                have_rec = bool(shutil.which(rec))
+            if not have_rec:
+                print(Colors.fg.yellow, "Note: Wayland session detected. For screen recording, install a Wayland recorder:")
+                print(" - wf-recorder (for wlroots/sway/hyprland): sudo apt install wf-recorder")
+                print(" - gpu-screen-recorder (for GNOME/KDE/all): https://git.dec05eba.com/gpu-screen-recorder or flatpak install flathub com.dec05eba.gpu_screen_recorder", Colors.reset)
 
         # All good
         # #########Interim don't worry about macOS
@@ -350,7 +410,9 @@ def run_shell_cmd(cmd, silent=False, save_stdout=False, colorize=False):
         print('stdout', stdout_line)
     output = proc.communicate()[0]
     exit_code = proc.returncode
-    if exit_code == 0:
+    # 0 is standard success, 124 is normal exit code when 'timeout' duration finishes,
+    # 130/143/255 occur when stopped manually via SIGINT, SIGTERM (pkill), or ffmpeg quit
+    if exit_code in (0, 124, 130, 143, 255):
         if save_stdout:
             return stdout_line
         else:
