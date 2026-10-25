@@ -37,10 +37,6 @@ def cut_clip(waiting=False, silent=True, conversation=False,
 
     # Initialization
     result_ready = False
-    if rec_time is not None:
-        rec_time = float(rec_time)
-    else:
-        rec_time = 180.0
     plate = platform.system()
 
     # Form the command

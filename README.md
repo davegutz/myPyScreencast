@@ -22,12 +22,19 @@ Before going there, download the source code now because it's right at the top o
 
 We're wrapping an existing tool (FFmpeg) that works on all platforms to make it easy for non-tech people to use.  After installation, only mouse clicks are required to enjoy using it.
 
+### Linux Display Server Support (X11 & Wayland)
+myPyScreencast supports both **X11** and **Wayland** display servers on Linux:
+- Users do **not** need to use X11 or switch session types.
+- Modern desktop environments using Wayland (such as KDE Plasma Wayland or GNOME) are automatically detected and supported via high-performance Wayland capture backends like `gpu-screen-recorder` or `wf-recorder`.
+- For X11 desktop sessions, native FFmpeg (`x11grab`) capture is used.
+
 ## Testing
 I ran the wrapped 'myPyScreencast' tool on three different laptops I have:  a MacBook Air from 2015, a gaming HP OMEN running Windows 11 from 2022, and a tiny Lenovo running Linux from 2022.
+
+*Linux testing note:* Tested and verified working on modern KDE Plasma on Wayland (`DESKTOP_SESSION=plasmawayland`) with `gpu-screen-recorder`. While KDE Plasma historically ran natively under X11, modern Wayland configurations work smoothly out of the box with zero session switching needed.
 
 ## Recommendations
 1. Use the Linux and Windows versions only.  TODO: The macOS version stutters. 
 
 ## License
 myPyScreencast's code are released under the MIT License.
-See [LICENSE](https://github.com/openai/whisper/blob/main/LICENSE) for further details.
