@@ -249,7 +249,8 @@ def screencast(waiting=False, silent=True, conversation=False,
         else:
             audio_param = f'-a "{audio_in}"'
         w_param = f'-w "{video_in}"' if video_in and video_in != '$DISPLAY' else '-w screen'
-        command = f'timeout {rec_time:5.1f}s {gsr_cmd} {w_param} -f 60 {audio_param} -o "{output_file}"'
+        portal_opt = '-restore-portal-session yes ' if video_in == 'portal' else ''
+        command = f'timeout {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f 60 {audio_param} -o "{output_file}"'
     elif video_grabber == 'wf-recorder':
         audio_param = f'-a "{audio_in}"' if audio_in and audio_in not in ('', 'none') else '-a'
         command = f'timeout {rec_time:5.1f}s wf-recorder {audio_param} -f "{output_file}"'
@@ -298,7 +299,7 @@ def screencast(waiting=False, silent=True, conversation=False,
         result = run_shell_cmd(command, silent=silent)
         print(Colors.reset)
         print(command + '\n')
-        if result == -1:
+        if result == -1 or not os.path.isfile(output_file) or os.path.getsize(output_file) == 0:
             print(Colors.fg.blue, 'failed.', Colors.reset)
             return None, False
         # print(Colors.fg.orange, 'Recorded for {:6.1f} seconds.'.format(timeit.default_timer() - start_time),
@@ -307,7 +308,7 @@ def screencast(waiting=False, silent=True, conversation=False,
         print(Colors.fg.orange, "  The result is in ", Colors.fg.blue, output_file, Colors.reset)
     else:
         result = run_shell_cmd(command, silent=silent)
-        if result == -1:
+        if result == -1 or not os.path.isfile(output_file) or os.path.getsize(output_file) == 0:
             return result_ready, False
         result_ready = True
 

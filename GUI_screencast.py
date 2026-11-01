@@ -464,6 +464,15 @@ class FFmpegThread(Thread):
                 press_exit_fullscreen_keys()
                 tk.messagebox.showinfo(title='Screencast', message=msg)
                 update_all_file_paths()
+            else:
+                root.lift()
+                print('recording failed or target file missing')
+                msg = f"Recording failed: output '{R.target_path.get()}' was not created or is empty."
+                thread = Thread(target=send_message, kwargs={'subject': f"FAILED: {R.title}", 'message': msg})
+                thread.start()
+                press_exit_fullscreen_keys()
+                tk.messagebox.showerror(title='Screencast Error', message=msg)
+                update_all_file_paths()
         else:
             print('aborting recording....need to enter title.  Presently = ', R.title)
         thread_active.set(thread_active.get()-1)

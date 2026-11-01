@@ -28,6 +28,29 @@ myPyScreencast supports both **X11** and **Wayland** display servers on Linux:
 - Modern desktop environments using Wayland (such as KDE Plasma Wayland or GNOME) are automatically detected and supported via high-performance Wayland capture backends like `gpu-screen-recorder` or `wf-recorder`.
 - For X11 desktop sessions, native FFmpeg (`x11grab`) capture is used.
 
+#### Wayland Video Input Options: `screen` vs. `portal`
+On Wayland with `gpu-screen-recorder`, you can set the `Video in` parameter to either `screen` or `portal`:
+
+- **`screen` (Recommended for unattended movie recording):**
+  - **Pros:**
+    - Fully automated: Starts instantly after the countdown with zero prompts or user interaction.
+    - Captures directly from hardware KMS/DRM display buffers with maximum performance and no dropped frames.
+    - Most reliable for walk-away recording of fullscreen media.
+  - **Cons:**
+    - Captures the entire monitor: any overlapping windows, mouse movements, or desktop notifications will be recorded.
+    - Requires dedicating the display to the video being recorded.
+
+- **`portal` (Recommended for background recording while multitasking):**
+  - **Pros:**
+    - Window-specific capture: Uses `xdg-desktop-portal` with PipeWire to record **only** a chosen application window (e.g. your browser or media player).
+    - You can freely work in other windows, place windows over the player, or switch virtual desktops without them appearing in the recording.
+    - Combined with per-app audio routing (directing only the movie player to the loopback device), the movie records silently in the background while you continue working.
+    - Automatically restores previous session tokens (`-restore-portal-session yes`) so you don't have to re-select the window on subsequent runs.
+  - **Cons:**
+    - Interactive authorization: On first launch, your desktop environment pops up a permission dialog to choose which window or screen to share. If this prompt is not approved, recording cannot begin.
+    - Background rendering throttling: If the movie window is completely minimized to the panel, web browsers may throttle frame rate or pause playback to save power. (Best practice: keep the window open on another virtual desktop rather than minimizing it).
+    - Same-app audio sharing: If you play audio in other tabs of the same browser instance, that sound may also route to the loopback sink. Use a separate browser for your foreground work.
+
 ## Testing
 I ran the wrapped 'myPyScreencast' tool on three different laptops I have:  a MacBook Air from 2015, a gaming HP OMEN running Windows 11 from 2022, and a tiny Lenovo running Linux from 2022.
 
