@@ -70,6 +70,14 @@ python -m pip install pvrecorder
 python -m pip install ttwidgets
 ```
 
+## Push Notification Alerts (ntfy.sh)
+GUI_screencast sends recording start, stop, and failure alerts using [ntfy.sh](https://ntfy.sh). This requires **zero passwords, zero accounts, and zero Google credentials**:
+
+1. Install the free **ntfy** app on your phone (Android from Google Play/F-Droid, or iOS from App Store).
+2. Tap **+** (Subscribe) and enter your topic name (default: `daveg_screencast_alerts` as set in `myGmail.py`).
+3. You will receive instant notifications whenever a screencast starts or finishes.
+4. Alerts can also be viewed in your browser at `https://ntfy.sh/daveg_screencast_alerts`.
+
 ### Running:  [here](RUNNING_windows.md)
 
 ### Special Developer Instructions:  [here](DEVELOPER.md)

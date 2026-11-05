@@ -83,6 +83,16 @@ myPyScreencast supports both **X11** and **Wayland** display servers. You do **n
 
 ---
 
+### Push Notification Alerts (`ntfy.sh`)
+`GUI_screencast.py` sends start, stop, and failure alerts using [ntfy.sh](https://ntfy.sh). This requires **zero passwords, zero accounts, and zero Google credentials**:
+
+1. Install the free **ntfy** app on your phone (Android from Google Play/F-Droid, or iOS from App Store).
+2. Tap **+** (Subscribe) and enter your topic name (default: `daveg_screencast_alerts` as set in `myGmail.py`).
+3. Whenever a recording starts, completes, or fails, your phone will receive an instant push notification.
+4. You can also view alerts in any web browser at `https://ntfy.sh/daveg_screencast_alerts`.
+
+---
+
 # Running
 We're going to make this all run with a mouse click by creating a shortcut.
 

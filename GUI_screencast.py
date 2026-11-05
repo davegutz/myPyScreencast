@@ -35,6 +35,8 @@ from GitHub_util import check_newer_git_repo
 from myGmail import *
 import sys
 import os
+import subprocess
+import urllib.request
 
 _kb_backend = None
 try:
@@ -814,24 +816,36 @@ def print_vars():
     print(f"{video_delay.get()=}")
 
 
-def send_message(email=my_email, password=my_app_password, to=my_email_target, subject='undefined', message='undefined'):
-    """Sends email from 'email' to 'to'"""
-    print(f"{email=} {password=} {to=} {subject=} {message=}")
+def send_message(subject='undefined', message='undefined', topic=None, **kwargs):
+    """Sends notification to ntfy.sh topic (no passwords or Google account required)."""
+    target_topic = topic or getattr(sys.modules.get('myGmail'), 'ntfy_topic', 'daveg_screencast_alerts')
+    print(f"send_message: {target_topic=} {subject=} {message=}")
     try:
-        # Only for gmail account.
-        with smtplib.SMTP('smtp.gmail.com:587') as server:
-            server.ehlo()  # local host
-            server.starttls()  # Puts the connection to the SMTP server
-            server.login(email, password)
-            # Format the subject and message together
-            message = 'Subject: {}\n\n{}'.format(subject, message)
-            server.sendmail(email, to, message)
-            print('Message sent')
+        url = f"https://ntfy.sh/{target_topic}"
+        headers = {
+            'Title': str(subject),
+            'Priority': 'high' if 'FAILED' in str(subject).upper() else 'default',
+            'Tags': 'warning' if 'FAILED' in str(subject).upper() else 'video_camera',
+        }
+        req = urllib.request.Request(
+            url,
+            data=str(message).encode('utf-8'),
+            headers=headers,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                print(f"Notification sent successfully to ntfy.sh/{target_topic}")
+            else:
+                print(f"ntfy.sh responded with HTTP {resp.status}")
     except Exception as e:
-        print("send_message failed:", e)
-        msg = "You need a new app password: Google - Manage account - Security - 2-step verification - App passwords - 'gmail' -->myGmail.py"
-        print(msg)
-        tk.messagebox.showinfo(title='ERROR', message=msg)
+        print(f"send_message failed to publish to ntfy.sh/{target_topic}:", e)
+        # Fallback to local desktop notification if available
+        if shutil.which('notify-send'):
+            try:
+                subprocess.run(['notify-send', str(subject), str(message)], check=False)
+            except Exception:
+                pass
 
 
 def size_of(path):
