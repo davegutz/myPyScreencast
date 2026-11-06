@@ -26,11 +26,12 @@ You do **not** need to switch your Linux session to X11. Both X11 and Wayland se
 
 * **Wayland sessions:**
   GUI_screencast automatically detects Wayland (`WAYLAND_DISPLAY` or `XDG_SESSION_TYPE=wayland`). Screen capture on Wayland uses a dedicated Wayland capture utility:
-  * `gpu-screen-recorder` (recommended for KDE Plasma, GNOME, and hardware-accelerated capture):
-    Set Video grabber to `gpu-screen-recorder` and target to `screen` (for unattended whole-monitor capture) or `portal` (to isolate a specific window while working in other apps).
-    *Working Example:* Tested and verified on modern KDE Plasma on Wayland (`DESKTOP_SESSION=plasmawayland`). While KDE Plasma historically ran natively under X11, Wayland is fully supported. See [README](../README.md#wayland-video-input-options-screen-vs-portal) for a detailed pros/cons comparison between `screen` and `portal` modes.
-  * `wf-recorder` (for wlroots/sway/hyprland or as an apt alternative):
-    `sudo apt install wf-recorder`. Set Video grabber to `wf-recorder` and target to `screen`.
+  * `gpu-screen-recorder` (recommended for KDE Plasma, GNOME, COSMIC, and hardware-accelerated capture):
+    Set Video grabber to `gpu-screen-recorder` and target to `portal` or `screen`.
+    *Note for HP OMEN / CachyOS (COSMIC):* Use **`portal`** to prevent direct KMS hardware contention with `cosmic-comp` that can cause system sleep/suspend to fail.
+    *Working Example:* Tested and verified on modern KDE Plasma on Wayland (`DESKTOP_SESSION=plasmawayland`) and HP OMEN on CachyOS (COSMIC desktop). See [README](../README.md#wayland-video-input-options-screen-vs-portal) for a detailed pros/cons comparison between `screen` and `portal` modes.
+  * `wf-recorder` (for wlroots/sway/hyprland/COSMIC or as an alternative):
+    `sudo pacman -S wf-recorder` (CachyOS/Arch) or `sudo apt install wf-recorder` (Ubuntu/Debian). Set Video grabber to `wf-recorder` and target to `screen`.
 
 * **X11 sessions:**
   * Workstation: `:0.0+0,0`

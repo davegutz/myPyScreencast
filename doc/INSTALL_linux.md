@@ -73,8 +73,12 @@ myPyScreencast supports both **X11** and **Wayland** display servers. You do **n
     ```
     Or compile/install natively from [git.dec05eba.com/gpu-screen-recorder](https://git.dec05eba.com/gpu-screen-recorder).
     *(Verified working configuration: KDE Plasma on Wayland with `DESKTOP_SESSION=plasmawayland` using `gpu-screen-recorder`).*
-  - **`wf-recorder`** (easy install via apt, works great on wlroots/sway/hyprland or as an alternative):
+  - **`wf-recorder`** (works great on wlroots/sway/hyprland/COSMIC or as an alternative):
     ```bash
+    # On CachyOS / Arch Linux:
+    sudo pacman -S wf-recorder
+
+    # On Ubuntu / Debian:
     sudo apt install wf-recorder
     ```
 

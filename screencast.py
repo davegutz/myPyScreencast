@@ -223,20 +223,22 @@ def screencast(waiting=False, silent=True, conversation=False,
         # Ask for input to force hold to see stderr
         if silent is False and waiting is True:
             input('\nEnter anything to close window')
-        return result_ready, None
+        return None, False
 
     # Check tool availability for Wayland recording backends
     if video_grabber == 'gpu-screen-recorder':
         if not has_gpu_screen_recorder():
             msg = (f"Wayland recorder '{video_grabber}' was not found.\n"
-                   f"Please install it (e.g. 'sudo apt install wf-recorder' or install gpu-screen-recorder).")
+                   f"Please install it (e.g. 'sudo pacman -S wf-recorder' on CachyOS/Arch, "
+                   f"'sudo apt install wf-recorder' on Ubuntu/Debian, or install gpu-screen-recorder).")
             print(Colors.fg.red, msg, Colors.reset)
             messagebox.showerror(title='Recorder Missing', message=msg)
             return None, False
     elif video_grabber in ('wf-recorder', 'wl-screenrec'):
         if not shutil.which(video_grabber):
             msg = (f"Wayland recorder '{video_grabber}' was not found.\n"
-                   f"Please install it (e.g. 'sudo apt install wf-recorder' or install gpu-screen-recorder).")
+                   f"Please install it (e.g. 'sudo pacman -S wf-recorder' on CachyOS/Arch, "
+                   f"'sudo apt install wf-recorder' on Ubuntu/Debian, or install gpu-screen-recorder).")
             print(Colors.fg.red, msg, Colors.reset)
             messagebox.showerror(title='Recorder Missing', message=msg)
             return None, False
@@ -250,12 +252,12 @@ def screencast(waiting=False, silent=True, conversation=False,
             audio_param = f'-a "{audio_in}"'
         w_param = f'-w "{video_in}"' if video_in and video_in != '$DISPLAY' else '-w screen'
         portal_opt = '-restore-portal-session yes ' if video_in == 'portal' else ''
-        command = f'timeout {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f 60 {audio_param} -o "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f 60 {audio_param} -o "{output_file}"'
     elif video_grabber == 'wf-recorder':
         audio_param = f'-a "{audio_in}"' if audio_in and audio_in not in ('', 'none') else '-a'
-        command = f'timeout {rec_time:5.1f}s wf-recorder {audio_param} -f "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s wf-recorder {audio_param} -f "{output_file}"'
     elif video_grabber == 'wl-screenrec':
-        command = f'timeout {rec_time:5.1f}s wl-screenrec --audio --filename "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s wl-screenrec --audio --filename "{output_file}"'
     elif video_grabber == 'kmsgrab':
         command = ("ffmpeg -threads 4" +
                    " -device /dev/dri/card0 -f kmsgrab -i -" +
@@ -309,7 +311,7 @@ def screencast(waiting=False, silent=True, conversation=False,
     else:
         result = run_shell_cmd(command, silent=silent)
         if result == -1 or not os.path.isfile(output_file) or os.path.getsize(output_file) == 0:
-            return result_ready, False
+            return None, False
         result_ready = True
 
     print('')

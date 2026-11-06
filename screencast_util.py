@@ -15,6 +15,7 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 import os
 import sys
+import re
 import json
 import inspect
 import shutil
@@ -80,6 +81,240 @@ def detect_wayland_recorder():
         if shutil.which(tool):
             return tool
     return 'gpu-screen-recorder'
+
+
+def strip_ansi(text):
+    """Strip ANSI color/escape sequences from command output."""
+    return re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
+
+
+def get_wayland_display_info():
+    """Detect active Wayland display output, current resolution, and refresh rate."""
+    env = os.environ.copy()
+    if 'WAYLAND_DISPLAY' not in env:
+        for w in ('wayland-1', 'wayland-0'):
+            p = f'/run/user/{os.getuid()}/{w}'
+            if os.path.exists(p):
+                env['WAYLAND_DISPLAY'] = w
+                break
+        else:
+            env['WAYLAND_DISPLAY'] = 'wayland-1'
+
+    # 1. COSMIC desktop: cosmic-randr
+    if shutil.which('cosmic-randr'):
+        try:
+            res = subprocess.run(['cosmic-randr', 'list'], env=env, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, timeout=3)
+            if res.returncode == 0:
+                clean_stdout = strip_ansi(res.stdout)
+                lines = clean_stdout.splitlines()
+                current_output = None
+                is_enabled = False
+                for line in lines:
+                    out_match = re.match(r'^\s*(\S+)\s+\((enabled|disabled)\)', line)
+                    if out_match:
+                        current_output = out_match.group(1)
+                        is_enabled = (out_match.group(2) == 'enabled')
+                        continue
+                    if is_enabled and current_output and '(current)' in line:
+                        mode_match = re.search(r'(\d+)x(\d+)\s+@\s+([\d.]+)\s+Hz', line)
+                        if mode_match:
+                            cur_w = int(mode_match.group(1))
+                            cur_h = int(mode_match.group(2))
+                            cur_hz = float(mode_match.group(3))
+                            target_60 = None
+                            for scan_line in lines:
+                                m_scan = re.search(r'(\d+)x(\d+)\s+@\s+([\d.]+)\s+Hz', scan_line)
+                                if m_scan:
+                                    sw, sh, srate = int(m_scan.group(1)), int(m_scan.group(2)), float(m_scan.group(3))
+                                    if sw == cur_w and sh == cur_h and 58.0 <= srate <= 62.0:
+                                        target_60 = srate
+                                        break
+                            return {
+                                'tool': 'cosmic-randr',
+                                'output': current_output,
+                                'width': cur_w,
+                                'height': cur_h,
+                                'current_hz': cur_hz,
+                                'target_hz': target_60 or 60.0,
+                                'env': env
+                            }
+        except Exception:
+            pass
+
+    # 2. KDE Plasma: kscreen-doctor
+    if shutil.which('kscreen-doctor'):
+        try:
+            res = subprocess.run(['kscreen-doctor', '-o'], env=env, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, timeout=3)
+            if res.returncode == 0:
+                clean_stdout = strip_ansi(res.stdout)
+                current_output = None
+                for line in clean_stdout.splitlines():
+                    out_match = re.search(r'Output\s+\d+\s+([a-zA-Z0-9_-]+)\s+enabled', line)
+                    if out_match:
+                        current_output = out_match.group(1)
+                    if current_output and '*' in line:
+                        m = re.search(r'(\d+)x(\d+)@([\d.]+)\*', line)
+                        if m:
+                            cur_w, cur_h, cur_hz = int(m.group(1)), int(m.group(2)), float(m.group(3))
+                            return {
+                                'tool': 'kscreen-doctor',
+                                'output': current_output,
+                                'width': cur_w,
+                                'height': cur_h,
+                                'current_hz': cur_hz,
+                                'target_hz': 60.0,
+                                'env': env
+                            }
+        except Exception:
+            pass
+
+    # 3. wlroots: wlr-randr
+    if shutil.which('wlr-randr'):
+        try:
+            res = subprocess.run(['wlr-randr'], env=env, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, timeout=3)
+            if res.returncode == 0:
+                clean_stdout = strip_ansi(res.stdout)
+                current_output = None
+                for line in clean_stdout.splitlines():
+                    if not line.startswith(' '):
+                        current_output = line.split()[0]
+                    elif current_output and 'current' in line:
+                        m = re.search(r'(\d+)x(\d+)\s+px,\s+([\d.]+)\s+Hz', line)
+                        if m:
+                            cur_w, cur_h, cur_hz = int(m.group(1)), int(m.group(2)), float(m.group(3))
+                            return {
+                                'tool': 'wlr-randr',
+                                'output': current_output,
+                                'width': cur_w,
+                                'height': cur_h,
+                                'current_hz': cur_hz,
+                                'target_hz': 60.0,
+                                'env': env
+                            }
+        except Exception:
+            pass
+
+    return None
+
+
+def set_wayland_display_refresh_rate(info, target_hz=None):
+    """Set Wayland display output to target_hz refresh rate."""
+    if not info:
+        return False, "No display info available"
+    tool = info.get('tool')
+    output = info.get('output')
+    width = info.get('width')
+    height = info.get('height')
+    rate = target_hz if target_hz is not None else info.get('target_hz', 60.0)
+    env = info.get('env') or os.environ.copy()
+
+    if tool == 'cosmic-randr':
+        cmd = ['cosmic-randr', 'mode', output, str(width), str(height), '--refresh', str(rate)]
+        try:
+            res = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0:
+                return True, f"Set {output} to {width}x{height} @ {rate} Hz"
+            else:
+                err = res.stderr.strip() or f"exit code {res.returncode}"
+                return False, err
+        except Exception as e:
+            return False, str(e)
+    elif tool == 'kscreen-doctor':
+        cmd = ['kscreen-doctor', f'output.{output}.mode.{width}x{height}@{int(round(rate))}']
+        try:
+            res = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0:
+                return True, f"Set {output} to {width}x{height} @ {rate} Hz"
+            else:
+                return False, res.stderr.strip()
+        except Exception as e:
+            return False, str(e)
+    elif tool == 'wlr-randr':
+        cmd = ['wlr-randr', '--output', output, '--mode', f'{width}x{height}@{rate}']
+        try:
+            res = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0:
+                return True, f"Set {output} to {width}x{height} @ {rate} Hz"
+            else:
+                return False, res.stderr.strip()
+        except Exception as e:
+            return False, str(e)
+    return False, f"Unsupported display tool: {tool}"
+
+
+def check_and_prompt_display_refresh_rate(parent=None):
+    """Check Wayland display refresh rate. If > 62 Hz, prompt user to set it to 60 Hz."""
+    if not is_wayland_session():
+        return True
+
+    info = get_wayland_display_info()
+    if not info:
+        return True
+
+    current_hz = info.get('current_hz', 60.0)
+    if current_hz <= 62.0:
+        return True
+
+    import tkinter.messagebox
+    output = info.get('output', 'display')
+    target_hz = info.get('target_hz', 60.0)
+    msg = (
+        f"Your Wayland display '{output}' is running at {current_hz:.1f} Hz.\n\n"
+        f"Recording at 60 fps from a {current_hz:.1f} Hz display causes video judder "
+        f"and irregular frame timing.\n\n"
+        f"Would you like to automatically switch '{output}' to {target_hz:.1f} Hz now?"
+    )
+
+    try:
+        answer = tkinter.messagebox.askyesno(
+            title="Display Refresh Rate Warning",
+            message=msg,
+            parent=parent
+        )
+    except Exception:
+        answer = False
+
+    if answer:
+        success, err = set_wayland_display_refresh_rate(info, target_hz=target_hz)
+        if success:
+            try:
+                tkinter.messagebox.showinfo(
+                    title="Display Refresh Rate",
+                    message=f"Display '{output}' successfully set to {target_hz:.1f} Hz.",
+                    parent=parent
+                )
+            except Exception:
+                pass
+            return True
+        else:
+            try:
+                tkinter.messagebox.showwarning(
+                    title="Could Not Set Refresh Rate",
+                    message=(
+                        f"Could not automatically set display to {target_hz:.1f} Hz:\n{err}\n\n"
+                        f"Please open your System Display Settings and change your refresh rate to 60 Hz."
+                    ),
+                    parent=parent
+                )
+            except Exception:
+                pass
+            return True
+    else:
+        try:
+            tkinter.messagebox.showinfo(
+                title="Display Refresh Rate",
+                message=(
+                    f"Recording will proceed at {current_hz:.1f} Hz display rate.\n\n"
+                    f"Tip: If you notice motion jitter, change your refresh rate to 60 Hz in System Display Settings."
+                ),
+                parent=parent
+            )
+        except Exception:
+            pass
+        return True
 
 
 def str2bool(string):
@@ -156,7 +391,7 @@ def check_install(platform):
                 have_rec = bool(shutil.which(rec))
             if not have_rec:
                 print(Colors.fg.yellow, "Note: Wayland session detected. For screen recording, install a Wayland recorder:")
-                print(" - wf-recorder (for wlroots/sway/hyprland): sudo apt install wf-recorder")
+                print(" - wf-recorder (for wlroots/sway/hyprland): sudo pacman -S wf-recorder (CachyOS/Arch) or sudo apt install wf-recorder (Ubuntu/Debian)")
                 print(" - gpu-screen-recorder (for GNOME/KDE/all): https://git.dec05eba.com/gpu-screen-recorder or flatpak install flathub com.dec05eba.gpu_screen_recorder", Colors.reset)
 
         # All good
@@ -384,9 +619,7 @@ class ResultWriter:
 # Run shell command showing stdout progress (special logic for Windows)
 # Hope it works on Mac and Linux
 def run_shell_cmd(cmd, silent=False, save_stdout=False, colorize=False):
-    stdout_line = None
-    if save_stdout:
-        stdout_line = []
+    output_lines = []
     if colorize:
         print(Colors.bg.brightblack, Colors.fg.wheat)
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -399,25 +632,27 @@ def run_shell_cmd(cmd, silent=False, save_stdout=False, colorize=False):
             nextline = ''
         if nextline == '' and proc.poll() is not None:
             break
-        if save_stdout:
-            stdout_line.append(nextline)
+        output_lines.append(nextline)
         if not silent:
             sys.stdout.write(nextline)
             sys.stdout.flush()
     if colorize:
         print(Colors.reset)
     if save_stdout and not silent:
-        print('stdout', stdout_line)
-    output = proc.communicate()[0]
+        print('stdout', output_lines)
+    proc.communicate()
     exit_code = proc.returncode
     # 0 is standard success, 124 is normal exit code when 'timeout' duration finishes,
     # 130/143/255 occur when stopped manually via SIGINT, SIGTERM (pkill), or ffmpeg quit
     if exit_code in (0, 124, 130, 143, 255):
         if save_stdout:
-            return stdout_line
+            return output_lines
         else:
             return exit_code
     else:
+        if silent and output_lines:
+            err_msg = "".join(output_lines).strip()
+            print(f"{Colors.fg.red}Command failed (exit code {exit_code}): {cmd}\nOutput:\n{err_msg}{Colors.reset}", file=sys.stderr)
         return -1
 
 

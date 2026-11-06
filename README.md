@@ -31,7 +31,11 @@ myPyScreencast supports both **X11** and **Wayland** display servers on Linux:
 #### Wayland Video Input Options: `screen` vs. `portal`
 On Wayland with `gpu-screen-recorder`, you can set the `Video in` parameter to either `screen` or `portal`:
 
-- **`screen` (Recommended for unattended movie recording):**
+> **Preference for HP OMEN / CachyOS (COSMIC Desktop):**
+> On hybrid-GPU laptops like the **HP OMEN** (AMD Cezanne iGPU + NVIDIA RTX 3070 Mobile) running **CachyOS with COSMIC desktop (`cosmic-comp`)**, **`portal` is strongly preferred**.
+> Direct KMS display-plane capture (`screen`) accesses hardware DRM buffers on the shared AMD GPU (`/dev/dri/card2`) outside the compositor, leaving `cosmic-comp`'s atomic modesetting state out of sync. This can cause the Linux kernel to hang in uninterruptible sleep (`drm_modeset_lock` freeze timeout) during subsequent system sleep or suspend. Capturing via **`portal`** routes through `xdg-desktop-portal-cosmic` and PipeWire, avoiding direct KMS hardware contention and allowing automatic sleep/suspend to function without issue.
+
+- **`screen` (Best for standard unattended movie recording on single-GPU/KDE/GNOME):**
   - **Pros:**
     - Fully automated: Starts instantly after the countdown with zero prompts or user interaction.
     - Captures directly from hardware KMS/DRM display buffers with maximum performance and no dropped frames.
@@ -46,6 +50,7 @@ On Wayland with `gpu-screen-recorder`, you can set the `Video in` parameter to e
     - You can freely work in other windows, place windows over the player, or switch virtual desktops without them appearing in the recording.
     - Combined with per-app audio routing (directing only the movie player to the loopback device), the movie records silently in the background while you continue working.
     - Automatically restores previous session tokens (`-restore-portal-session yes`) so you don't have to re-select the window on subsequent runs.
+    - Smooth 60 fps sampling avoiding uneven browser compositor frame timing or variable framerate judder.
   - **Cons:**
     - Interactive authorization: On first launch, your desktop environment pops up a permission dialog to choose which window or screen to share. If this prompt is not approved, recording cannot begin.
     - Background rendering throttling: If the movie window is completely minimized to the panel, web browsers may throttle frame rate or pause playback to save power. (Best practice: keep the window open on another virtual desktop rather than minimizing it).
@@ -54,7 +59,9 @@ On Wayland with `gpu-screen-recorder`, you can set the `Video in` parameter to e
 ## Testing
 I ran the wrapped 'myPyScreencast' tool on three different laptops I have:  a MacBook Air from 2015, a gaming HP OMEN running Windows 11 from 2022, and a tiny Lenovo running Linux from 2022.
 
-*Linux testing note:* Tested and verified working on modern KDE Plasma on Wayland (`DESKTOP_SESSION=plasmawayland`) with `gpu-screen-recorder`. While KDE Plasma historically ran natively under X11, modern Wayland configurations work smoothly out of the box with zero session switching needed.
+*Linux testing note:* Tested and verified working on:
+- Modern KDE Plasma on Wayland (`DESKTOP_SESSION=plasmawayland`) with `gpu-screen-recorder`.
+- **HP OMEN (AMD Cezanne + NVIDIA RTX 3070 Mobile) on CachyOS with COSMIC desktop (`cosmic-comp`)** using `gpu-screen-recorder` and `portal` mode.
 
 ## Recommendations
 1. Use the Linux and Windows versions only.  TODO: The macOS version stutters. 

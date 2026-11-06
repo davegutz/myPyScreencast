@@ -23,7 +23,8 @@
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
 from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
-from screencast_util import run_shell_cmd, is_wayland_session, detect_wayland_recorder
+from screencast_util import (run_shell_cmd, is_wayland_session, detect_wayland_recorder,
+                             has_gpu_screen_recorder, check_and_prompt_display_refresh_rate)
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 from tkinter import filedialog
@@ -35,6 +36,7 @@ from GitHub_util import check_newer_git_repo
 from myGmail import *
 import sys
 import os
+from pathlib import Path
 import subprocess
 import urllib.request
 
@@ -65,12 +67,152 @@ import platform
 import smtplib
 import shutil
 import time
+_initial_dependency_mtimes = {}
+_is_checking_dependencies = False
+
+
+def get_dependency_mtimes():
+    """Return dict of filepath -> st_mtime for Python dependencies in project directory."""
+    mtimes = {}
+    base_dir = Path(__file__).resolve().parent
+    excluded_files = set()
+    # 1. Modules loaded in sys.modules pointing into base_dir
+    for mod in list(sys.modules.values()):
+        f = getattr(mod, '__file__', None)
+        if f and isinstance(f, str):
+            p = Path(f).resolve()
+            p_str = str(p)
+            if p.is_relative_to(base_dir) and p.suffix == '.py' and p.name not in excluded_files:
+                if not any(part.startswith('.') or part in ('venv', '.venv', '__pycache__') for part in p.parts):
+                    if p_str not in mtimes:
+                        try:
+                            mtimes[p_str] = p.stat().st_mtime
+                        except Exception:
+                            pass
+    # 2. Local .py files under base_dir
+    for p in base_dir.rglob('*.py'):
+        p_res = p.resolve()
+        p_str = str(p_res)
+        if not any(part.startswith('.') or part in ('venv', '.venv', '__pycache__') for part in p_res.parts) and p_res.name not in excluded_files:
+            if p_str not in mtimes:
+                try:
+                    mtimes[p_str] = p_res.stat().st_mtime
+                except Exception:
+                    pass
+    return mtimes
+
+
+def restart_app():
+    """Restarts the GUI application cleanly using os.execv."""
+    try:
+        r = getattr(tk, '_default_root', None)
+        if r:
+            r.destroy()
+    except Exception:
+        pass
+    python_exe = sys.executable
+    args = [python_exe] + sys.argv
+    try:
+        os.execv(python_exe, args)
+    except Exception:
+        os._exit(0)
+
+
+def check_dependencies_and_warn(master=None):
+    """Check if any local Python dependency has changed since startup.
+    If changed, display a warning dialog with option to restart or continue.
+    """
+    global _initial_dependency_mtimes, _is_checking_dependencies
+    if _is_checking_dependencies:
+        return
+
+    _is_checking_dependencies = True
+    try:
+        if not _initial_dependency_mtimes:
+            _initial_dependency_mtimes = get_dependency_mtimes()
+            return
+
+        current_mtimes = get_dependency_mtimes()
+        changed_files = []
+        for filepath, init_mtime in _initial_dependency_mtimes.items():
+            curr_mtime = current_mtimes.get(filepath)
+            if curr_mtime is not None and curr_mtime > init_mtime:
+                changed_files.append((os.path.basename(filepath), filepath, init_mtime, curr_mtime))
+
+        if changed_files:
+            file_list_str = "\n".join([f"• {name}" for name, _, _, _ in changed_files])
+            msg = (
+                f"Warning: One or more dependencies of GUI_screencast have changed on disk:\n\n"
+                f"{file_list_str}\n\n"
+                f"Click OK to restart GUI_screencast now, or Cancel to continue."
+            )
+            try:
+                answer = tkinter.messagebox.askokcancel("GUI_screencast Dependency Warning", msg)
+            except Exception:
+                answer = True
+
+            if answer:
+                restart_app()
+            else:
+                for _, filepath, _, curr in changed_files:
+                    _initial_dependency_mtimes[filepath] = curr
+    finally:
+        _is_checking_dependencies = False
+
+
 if platform.system() == 'Darwin':
     # noinspection PyUnresolvedReferences
-    from ttwidgets import TTButton as myButton
+    from ttwidgets import TTButton as _BaseButton
 else:
     import tkinter as tk
-    from tkinter import Button as myButton
+    from tkinter import Button as _BaseButton
+
+
+class myButton(_BaseButton):
+    """Button subclass that checks for dependency file changes on any button activity."""
+
+    def __init__(self, *args, **kwargs):
+        original_command = kwargs.get("command", None)
+        if original_command:
+
+            def wrapped_command(*c_args, **c_kwargs):
+                check_dependencies_and_warn()
+                return original_command(*c_args, **c_kwargs)
+
+            kwargs["command"] = wrapped_command
+        super().__init__(*args, **kwargs)
+
+    def cget(self, key):
+        try:
+            if hasattr(self, "winfo_exists") and not self.winfo_exists():
+                return ""
+            return super().cget(key)
+        except Exception:
+            return ""
+
+    def config(self, cnf=None, **kw):
+        try:
+            if hasattr(self, "winfo_exists") and not self.winfo_exists():
+                return
+        except Exception:
+            return
+        if "command" in kw and kw["command"]:
+            orig_cmd = kw["command"]
+
+            def wrapped_cmd(*c_args, **c_kwargs):
+                check_dependencies_and_warn()
+                return orig_cmd(*c_args, **c_kwargs)
+
+            kw["command"] = wrapped_cmd
+        try:
+            super().config(cnf, **kw)
+        except Exception:
+            pass
+
+    def configure(self, cnf=None, **kw):
+        self.config(cnf, **kw)
+
+
 global putty_shell
 
 
@@ -449,27 +591,36 @@ class FFmpegThread(Thread):
             R.running = False
             # Drop out of fullscreen and stop to help keep !Machine working
             press_exit_fullscreen_keys()
-            if rf is not None and rr is True:
+            if rf and rr:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
                 sync()
-            if size_of(R.target_path.get()) > 0:
-                root.lift()
-                print('sending message')
-                if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
-                    msg = 'target ready'
+                if size_of(R.target_path.get()) > 0:
+                    root.lift()
+                    print('sending message')
+                    if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
+                        msg = 'target ready'
+                    else:
+                        print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
+                        msg = 'Done but >1 min size difference'
+                    thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
+                    thread.start()
+                    press_exit_fullscreen_keys()
+                    tk.messagebox.showinfo(title='Screencast', message=msg)
+                    update_all_file_paths()
                 else:
-                    print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
-                    msg = 'Done but >1 min size difference'
-                thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
-                thread.start()
-                press_exit_fullscreen_keys()
-                tk.messagebox.showinfo(title='Screencast', message=msg)
-                update_all_file_paths()
+                    root.lift()
+                    print('recording failed or target file missing')
+                    msg = f"Recording failed: output '{R.target_path.get()}' was not created or is empty."
+                    thread = Thread(target=send_message, kwargs={'subject': f"FAILED: {R.title}", 'message': msg})
+                    thread.start()
+                    press_exit_fullscreen_keys()
+                    tk.messagebox.showerror(title='Screencast Error', message=msg)
+                    update_all_file_paths()
             else:
                 root.lift()
-                print('recording failed or target file missing')
-                msg = f"Recording failed: output '{R.target_path.get()}' was not created or is empty."
+                print('recording failed')
+                msg = f"Recording failed: capture backend exited with an error."
                 thread = Thread(target=send_message, kwargs={'subject': f"FAILED: {R.title}", 'message': msg})
                 thread.start()
                 press_exit_fullscreen_keys()
@@ -487,6 +638,8 @@ def add_to_clip_board(text):
 
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
+    check_dependencies_and_warn()
+    check_and_prompt_display_refresh_rate(parent=root)
     if sys.platform == 'linux':
         test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep output | grep Loopback | awk '{print $1}'"
         pulse_audio_loopback = run_shell_cmd(test_cmd, save_stdout=True, silent=True)
@@ -1067,8 +1220,12 @@ if __name__ == '__main__':
     - Supported backends: 'gpu-screen-recorder' (recommended for all compositors)
       or 'wf-recorder' (for wlroots/sway/hyprland).
  
-    - If needed, install wf-recorder via 'sudo apt install wf-recorder'
-      or gpu-screen-recorder from https://git.dec05eba.com/gpu-screen-recorder.
+    - Video input: 'portal' (strongly recommended on HP OMEN / CachyOS COSMIC to avoid DRM conflicts with system sleep)
+      or 'screen' (direct hardware KMS display plane capture).
+ 
+    - If needed, install gpu-screen-recorder via 'sudo pacman -Sy gpu-screen-recorder' (CachyOS/Arch)
+      or from https://git.dec05eba.com/gpu-screen-recorder.
+      For wf-recorder: 'sudo pacman -S wf-recorder' (CachyOS/Arch) or 'sudo apt install wf-recorder' (Ubuntu/Debian).
  
     - Audio is captured through PulseAudio/PipeWire loopback.
  
@@ -1173,8 +1330,22 @@ if __name__ == '__main__':
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
     # hms_label = tk.Label(root)
+    # Validate that configured Wayland recorder is available, fallback to detected one if missing
+    video_grab_init = cf[SYS]['video_grab']
+    if SYS == 'Linux_Wayland':
+        is_missing = False
+        if video_grab_init == 'gpu-screen-recorder':
+            is_missing = not has_gpu_screen_recorder()
+        elif not shutil.which(video_grab_init):
+            is_missing = True
+        if is_missing:
+            detected = detect_wayland_recorder()
+            if detected:
+                video_grab_init = detected
+                cf.put_item(SYS, 'video_grab', detected)
+
     COUNTDOWN_SEC = 10
-    R = MyRecorder(SYS, cf[SYS]['video_grab'], cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
+    R = MyRecorder(SYS, video_grab_init, cf[SYS]['video_in'], cf[SYS]['audio_grab'], cf[SYS]['audio_in'],
                    cwd_path.get(), cf[SYS]['title'], cf[SYS]['folder'], cf[SYS]['destination_folder'], COUNTDOWN_SEC)
     countdown_time = tk.IntVar(root, R.countdown_time)
 
@@ -1306,7 +1477,26 @@ if __name__ == '__main__':
     counter_status.pack()
 
     # Begin
+    _initial_dependency_mtimes.update(get_dependency_mtimes())
+
+    def _on_master_button_click(event):
+        try:
+            check_dependencies_and_warn()
+        except Exception:
+            pass
+
+    root.bind_all("<Button-1>", _on_master_button_click, add="+")
+
+    def _periodic_dependency_check():
+        try:
+            check_dependencies_and_warn()
+        except Exception:
+            pass
+        root.after(2000, _periodic_dependency_check)
+
+    root.after(2000, _periodic_dependency_check)
     root.after(200, check_git_newer_version)
+    root.after(500, lambda: check_and_prompt_display_refresh_rate(parent=root))
     handle_raw_path()
     R.raw_path.trace_add('write', handle_raw_path)
     handle_target_path()
