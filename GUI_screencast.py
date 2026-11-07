@@ -913,28 +913,12 @@ def cast_countdown():
     countdown_time.set(countdown_time.get() - 1)
     print(f"{msg=}")
     print(f"{countdown_time.get()=}")
-    # counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
-        counter.deiconify()
-        counter.lift()
-        center_timer()
         root.after(1000, cast_countdown)
     else:
-        counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
         thread.start()
         R.record()  # this blocks.  'STOP' is used to end early
-
-
-def center_timer(width=200, height=100):
-    # get screen width and height
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-
-    # calculate position x and y coordinates
-    x = (screen_width/2) - (width/2)
-    y = (screen_height/2) - (height/2)
-    counter.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 
 def clip_cut():
@@ -1777,8 +1761,6 @@ if __name__ == '__main__':
     root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png'))
                    if os.path.exists(os.path.join(script_loc, 'GUI_screencast_Icon.png'))
                    else tk.PhotoImage(file=os.path.join(script_loc, 'screencast.png')))
-    counter = tk.Tk()
-    counter.attributes('-topmost', True)
     thread_active = tk.IntVar(root, 0)
     tuners = Global(root)
     cwd_path = tk.StringVar(root, os.getcwd())
@@ -2038,8 +2020,6 @@ if __name__ == '__main__':
     R.stop_button.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
     git_check_butt.pack(side="right", fill='x')
-    counter_status = tk.Label(counter, text="Press START to begin recording")
-    counter_status.pack()
 
     # Begin
     _initial_dependency_mtimes.update(get_dependency_mtimes())
@@ -2083,5 +2063,3 @@ if __name__ == '__main__':
 
     root.protocol("WM_DELETE_WINDOW", _on_close)
     root.mainloop()
-    counter.mainloop()
-    counter.withdraw()

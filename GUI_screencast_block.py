@@ -499,12 +499,9 @@ def start_countdown():
     msg = 'Counting down'
     print(f"countdown {countdown_time.get()=}")
     countdown_time.set(countdown_time.get() - 1)
-    counter_status.config(text=f'{msg} ({countdown_time.get()}sec)')
     if countdown_time.get() > 0:
-        counter.lift()
         root.after(1000, start_countdown)
     else:
-        counter.withdraw()
         thread = Thread(target=stay_awake, kwargs={'up_set_min': rec_time.get()})
         thread.start()
         record()  # this blocks
@@ -824,8 +821,6 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title('Screencast')
     root.wm_minsize(width=min_width, height=main_height)
-    counter = tk.Tk()
-    counter.attributes('-topmost', True)
     countdown_time = tk.IntVar(root, 11)
     tuners = Global(root)
     script_loc = os.path.dirname(os.path.abspath(__file__))
@@ -984,8 +979,6 @@ if __name__ == '__main__':
     tuner_window_butt = myButton(record_frame, text="TUNER WINDOW", command=open_tuner_window, bg=bg_color)
     record_butt.pack(side="left", fill='x')
     tuner_window_butt.pack(side="right", fill='x')
-    counter_status = tk.Label(counter, text="Press START to begin recording")
-    counter_status.pack()
 
     # Begin
     handle_raw_path()
@@ -999,5 +992,3 @@ if __name__ == '__main__':
     handle_new_result_ready()
     new_result_ready.trace_add('write', handle_new_result_ready)
     root.mainloop()
-    counter.mainloop()
-    counter.withdraw()
