@@ -18,7 +18,7 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of
+from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, trim_video
 from configparser import ConfigParser
 from datetime import timedelta
 from tkinter import filedialog
@@ -90,6 +90,11 @@ class Global:
         self.start_clip_butt = myButton(owner)
         self.stop_clip_butt = myButton(owner)
         self.clip_cut_butt = myButton(owner)
+        self.trim_start_butt = myButton(owner)
+        self.trim_end_butt = myButton(owner)
+        self.trim_tuner_butt = myButton(owner)
+        self.trim_path_label = tk.Label(owner)
+        self.out_path_label = tk.Label(owner)
 
 
 # Global methods
@@ -186,6 +191,30 @@ def enter_start_clip_time():
 def enter_stop_clip_time():
     stop_clip.set(tk.simpledialog.askfloat(title=__file__, prompt="enter clip stop, minutes", initialvalue=stop_clip.get()))
     tuners.stop_clip_butt.config(text=stop_clip.get())
+
+
+def enter_trim_start():
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds to discard from beginning", initialvalue=trim_start.get())
+    if answer is None or answer == ():
+        return
+    if answer < 0.0:
+        answer = 0.0
+    trim_start.set(float(answer))
+    cf[SYS]['trim_start'] = str(trim_start.get())
+    cf.save_to_file()
+    tuners.trim_start_butt.config(text=str(trim_start.get()))
+
+
+def enter_trim_end():
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds to discard from end", initialvalue=trim_end.get())
+    if answer is None or answer == ():
+        return
+    if answer < 0.0:
+        answer = 0.0
+    trim_end.set(float(answer))
+    cf[SYS]['trim_end'] = str(trim_end.get())
+    cf.save_to_file()
+    tuners.trim_end_butt.config(text=str(trim_end.get()))
 
 
 def enter_title():
@@ -340,20 +369,43 @@ def open_tuner_window():
     sync_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_frame.pack(side=tk.TOP)
     tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=sync, bg='red', fg='white')
-    sync_label = tk.Label(sync_frame, text="Sync =", bg=bg_color)
+    sync_label = tk.Label(sync_frame, text="Sync (Trim input) =", bg=bg_color)
     tuners.out_path_label = tk.Label(sync_frame, text=out_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
     tuners.out_path_label.config(bg=bg_color)
     tuners.sync_tuner_butt.pack(side="left", fill='x')
     sync_label.pack(side="left", fill='x')
     tuners.out_path_label.pack(side="left", fill='x')
 
+    # Trim discard row
+    trim_discard_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    trim_discard_frame.pack(side=tk.TOP)
+    trim_discard_label = tk.Label(trim_discard_frame, text="Trim discard, seconds (start / end):", bg=bg_color)
+    tuners.trim_start_butt = myButton(trim_discard_frame, text=str(trim_start.get()), command=enter_trim_start, fg="green", bg=bg_color)
+    tuners.trim_end_butt = myButton(trim_discard_frame, text=str(trim_end.get()), command=enter_trim_end, fg="green", bg=bg_color)
+    trim_discard_label.pack(side="left", fill='x')
+    tuners.trim_start_butt.pack(side="left", fill='x')
+    tuners.trim_end_butt.pack(side="left", fill='x')
+
+    # Trim main (just below trim specs)
+    trim_frame = tk.Frame(tuner_window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    trim_frame.pack(side=tk.TOP)
+    tuners.trim_tuner_butt = myButton(trim_frame, text="***  TRIM    ***", command=trim, bg='red', fg='white')
+    trim_label = tk.Label(trim_frame, text="Trim =", bg=bg_color)
+    tuners.trim_path_label = tk.Label(trim_frame, text=trim_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.trim_path_label.config(bg=bg_color)
+    tuners.trim_tuner_butt.pack(side="left", fill='x')
+    trim_label.pack(side="left", fill='x')
+    tuners.trim_path_label.pack(side="left", fill='x')
+
     # Instructions
     tuner_doc_frame = tk.Frame(tuner_window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
     tuner_doc_frame.pack(side=tk.TOP)
-    tuner_doc = """Tune for video / audio sync.\n\
-    - Set range to be within the length of original video.\n\
-    - Press 'CLIP IT'.\n\
-    - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
+    tuner_doc = """Tune for video / audio sync and trimming.\n\
+    - Set clip range to test snippet with 'CLIP IT' and 'SYNC CLIP'.\n\
+    - Adjust 'Video delay +/-' as necessary to synchronize.\n\
+    - Press '*** SYNC ***' to synchronize full video (..._sync.mp4).\n\
+    - Discard trimmings: Set seconds to discard from beginning and end.\n\
+    - Press '*** TRIM ***' to produce trimmed video (...mp4)."""
     tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
     tuner_doc.pack(side="left", fill='x')
 
@@ -386,7 +438,7 @@ def record():
         raw_path.set(rf)  # screencast may cause null filename if fails
         new_result_ready.set(rr)
         sync()
-        shutil.move(out_path.get(), target_path.get())
+        trim()
         if size_of(target_path.get()) > 0:
             root.lift()
             print('sending message')
@@ -485,9 +537,103 @@ def sync():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
                              output_file=out_path.get())
+        sync_dest_path = os.path.join(destination_folder.get(), out_file.get())
+        if size_of(out_path.get()) > 0:
+            if os.path.abspath(out_path.get()) != os.path.abspath(sync_dest_path):
+                try:
+                    shutil.move(out_path.get(), sync_dest_path)
+                    print("Moved synchronized result to ", sync_dest_path)
+                except FileNotFoundError:
+                    print(f"is Lib drive plugged in?????????")
+                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
         update_file_paths()
     else:
         print("record first *******")
+
+
+def trim():
+    sync_dest_path = os.path.join(destination_folder.get(), out_file.get())
+    source_file = None
+    needs_sync = False
+    if size_of(sync_dest_path) > 0:
+        source_file = sync_dest_path
+        needs_sync = False
+    elif size_of(out_path.get()) > 0:
+        source_file = out_path.get()
+        needs_sync = False
+    elif size_of(raw_path.get()) > 0:
+        ans = tk.messagebox.askyesno(
+            title="Sync File Required",
+            message=f"Sync file '{out_file.get()}' not found.\n\nWould you like to run SYNC now to create it before trimming?"
+        )
+        if ans:
+            sync()
+            if size_of(sync_dest_path) > 0:
+                source_file = sync_dest_path
+            elif size_of(out_path.get()) > 0:
+                source_file = out_path.get()
+            else:
+                return
+        else:
+            return
+    else:
+        print("record first *******")
+        tk.messagebox.showinfo(title='Screencast', message='Please record and sync first. Trimming requires the synchronized (Sync=) file.')
+        return
+
+    trim_out_file = trim_file.get()
+    trim_out_path = os.path.join(folder.get(), trim_out_file)
+    trim_dest_path = os.path.join(destination_folder.get(), trim_out_file)
+
+    temp_sync_file = None
+    file_to_trim = source_file
+    try:
+        paint(tuners.trim_tuner_butt, bg='yellow', fg='black')
+        tuners.trim_tuner_butt.config(text="TRIMMING...")
+        root.update()
+
+        if needs_sync and abs(video_delay.get()) > 0.001:
+            temp_sync_file = os.path.join(folder.get(), title.get() + '_temp_sync.mp4')
+            if video_delay.get() >= 0.0:
+                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=source_file,
+                                 output_file=temp_sync_file)
+            else:
+                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=source_file,
+                                 output_file=temp_sync_file)
+            if size_of(temp_sync_file) > 0:
+                file_to_trim = temp_sync_file
+            else:
+                print("Failed to sync intermediate file for trimming")
+                tk.messagebox.showerror(title='Trim Error', message='Failed to synchronize intermediate file for trimming.')
+                return
+
+        success, msg = trim_video(input_file=file_to_trim, output_file=trim_out_path,
+                                  trim_start=trim_start.get(), trim_end=trim_end.get(),
+                                  crf=crf.get(), silent=silent.get())
+        if not success:
+            tk.messagebox.showerror(title='Trim Error', message=msg)
+            return
+
+        if size_of(trim_out_path) > 0:
+            if os.path.abspath(trim_out_path) != os.path.abspath(trim_dest_path):
+                try:
+                    shutil.move(trim_out_path, trim_dest_path)
+                    print("Moved trimmed result to ", trim_dest_path)
+                except FileNotFoundError:
+                    print(f"is Lib drive plugged in?????????")
+                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
+            else:
+                print("Trimmed result is in ", trim_out_path)
+
+        update_file_paths()
+    finally:
+        paint(tuners.trim_tuner_butt, bg='red', fg='white')
+        tuners.trim_tuner_butt.config(text="***  TRIM    ***")
+        if temp_sync_file and os.path.exists(temp_sync_file):
+            try:
+                os.remove(temp_sync_file)
+            except Exception:
+                pass
 
 
 def sync_clip():
@@ -509,13 +655,13 @@ def update_file_paths():
         paint(title_butt, bg='pink')
     else:
         paint(title_butt, bg=bg_color)
-    out_file.set(title.get()+'.mkv')
+    out_file.set(title.get() + '_sync.mp4')
     if os.path.exists(folder.get()):
         paint(folder_butt, bg='lightgreen')
     else:
         paint(folder_butt, bg='pink')
     out_path.set(os.path.join(folder.get(), out_file.get()))
-    new_target_path = os.path.join(destination_folder.get(), out_file.get())
+    new_target_path = os.path.join(destination_folder.get(), title.get() + '.mp4')
     if new_target_path != target_path.get():
         target_path.set(new_target_path)
     if size_of(target_path.get()) > 0:
@@ -546,6 +692,19 @@ def update_file_paths():
         paint(tuners.clip_path_label, bg=bg_color)
     clip_file.set(title.get() + '_clip.mkv')
     clip_path.set(os.path.join(folder.get(), clip_file.get()))
+    trim_file.set(title.get() + '.mp4')
+    trim_path.set(os.path.join(folder.get(), trim_file.get()))
+    trim_dest = os.path.join(destination_folder.get(), trim_file.get())
+    if size_of(trim_path.get()) > 0 or size_of(trim_dest) > 0:
+        paint(tuners.trim_path_label, bg='yellow')
+    else:
+        paint(tuners.trim_path_label, bg=bg_color)
+    tuners.trim_path_label.config(text=trim_file.get())
+    sync_dest = os.path.join(destination_folder.get(), out_file.get())
+    if size_of(out_path.get()) > 0 or size_of(sync_dest) > 0:
+        paint(tuners.out_path_label, bg='yellow')
+    else:
+        paint(tuners.out_path_label, bg=bg_color)
 
 
 if __name__ == '__main__':
@@ -566,6 +725,8 @@ if __name__ == '__main__':
                             "audio_in": 'default',
                             "silent": '1',
                             "instructions": '1',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.0'},
                 'Windows': {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
@@ -578,6 +739,8 @@ if __name__ == '__main__':
                             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
                             "silent": '1',
                             "instructions": '1',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.0'},
                 'Darwin':  {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
@@ -590,6 +753,8 @@ if __name__ == '__main__':
                             "audio_in": '2',
                             "silent": '1',
                             "instructions": '1',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.0'},
                 }
     cf = Begini(__file__, def_dict)
@@ -695,6 +860,10 @@ if __name__ == '__main__':
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
+    trim_file = tk.StringVar(root)
+    trim_path = tk.StringVar(root)
+    trim_start = tk.DoubleVar(root, float(cf[SYS].get('trim_start', '0.0')))
+    trim_end = tk.DoubleVar(root, float(cf[SYS].get('trim_end', '0.0')))
 
     # Pre-define so update_file_paths() works
     title_butt = myButton()

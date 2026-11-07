@@ -22,9 +22,12 @@
 #
 # See http://www.fsf.org/licensing/licenses/lgpl.txt for full license text.
 
-from screencast import screencast, delay_audio_sync, delay_video_sync, cut_clip, length_of, kill_ffmpeg
+from screencast import (screencast, delay_audio_sync, delay_video_sync, cut_clip,
+                        length_of, kill_ffmpeg, probe_source_stream, trim_video)
 from screencast_util import (run_shell_cmd, is_wayland_session, detect_wayland_recorder,
-                             has_gpu_screen_recorder, check_and_prompt_display_refresh_rate)
+                             has_gpu_screen_recorder, check_and_prompt_display_refresh_rate,
+                             restore_wayland_display_refresh_rate, detect_video_stream_framerate,
+                             get_video_container_fps, get_wayland_display_info)
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 from tkinter import filedialog
@@ -104,6 +107,10 @@ def get_dependency_mtimes():
 
 def restart_app():
     """Restarts the GUI application cleanly using os.execv."""
+    try:
+        restore_wayland_display_refresh_rate()
+    except Exception:
+        pass
     try:
         r = getattr(tk, '_default_root', None)
         if r:
@@ -350,6 +357,10 @@ class Global:
         self.start_clip_butt = myButton(owner)
         self.stop_clip_butt = myButton(owner)
         self.clip_cut_butt = myButton(owner)
+        self.trim_start_butt = myButton(owner)
+        self.trim_end_butt = myButton(owner)
+        self.trim_tuner_butt = myButton(owner)
+        self.trim_path_label = tk.Label()
         self.out_path_label = tk.Label()
         self.window = None
 
@@ -358,6 +369,7 @@ class Global:
         self.raw_path_label.config(text=R.raw_path.get())
         self.raw_clip_file_label.config(text=raw_clip_file.get())
         self.clip_path_label.config(text=clip_file.get())
+        self.trim_path_label.config(text=trim_file.get())
 
 
 class MyRecorder:
@@ -394,6 +406,10 @@ class MyRecorder:
         self.destination_folder_butt = myButton()
         self.run_perm = False
         self.countdown_time = countdown_time_
+        self.smooth_fps = None
+        self.rec_fps = 60
+        self.interrupted_for_fps_mismatch = False
+        self.detected_source_fps = None
 
     def __str__(self, prefix=''):
         s = prefix + "begini:\n"
@@ -500,15 +516,20 @@ class MyRecorder:
             print('already recording')
         else:
             self.thd_num += 1
+            self.interrupted_for_fps_mismatch = False
             self.thread.append(FFmpegThread(silent.get(), self.thd_num))
             print('starting thread', self.thd_num, end='...')
             self.thread[self.thd_num].start()
             self.running = True
             print('started casting', self.raw_path.get())
+            if self.smooth_fps is None and self.rec_fps == 60:
+                thd = Thread(target=check_early_recording_framerate, daemon=True)
+                thd.start()
 
-    def kill(self):
+    def kill(self, reason=None):
         if self.running is not None:
             kill_ffmpeg(self.sys)
+            restore_wayland_display_refresh_rate()
             self.cast_button.config(bg="red", fg='black')
             self.stop_button.config(bg=bg_color, fg=bg_color)
             self.running = False
@@ -520,22 +541,24 @@ class MyRecorder:
             self.cast_button.config(bg="red", fg='black')
             self.stop_button.config(bg=bg_color, fg=bg_color)
             print('Interrupted.  Start permission cancelled')
-            print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
-            if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
-                msg = 'Interrupted but target ready within 1 min'
-                print(msg)
-            else:
-                msg = 'Interrupted and >1 min size difference'
-                thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
-                thread.start()
+            if reason != 'fps_mismatch':
+                print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
+                if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
+                    msg = 'Interrupted but target ready within 1 min'
+                    print(msg)
+                else:
+                    msg = 'Interrupted and >1 min size difference'
+                    thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
+                    thread.start()
             handle_target_path()
 
     def update_file_paths(self):
         """Use 'title' and 'folder' to set paths of all files used"""
-        self.out_file = self.title + '.mp4'
+        self.out_file = self.title + '_sync.mp4'
         self.out_path = os.path.join(self.folder, self.out_file)
         self.new_result_ready.set(size_of(self.out_path) > 0)
-        new_target_path = os.path.join(self.destination_folder, self.out_file)
+        self.target_file = self.title + '.mp4'
+        new_target_path = os.path.join(self.destination_folder, self.target_file)
         if new_target_path != self.target_path.get():
             self.target_path.set(str(new_target_path))  # Trip the trace only on actual change
         self.raw_file = self.title + '_raw.mp4'
@@ -587,14 +610,22 @@ class FFmpegThread(Thread):
                                 audio_grabber=R.audio_grab, audio_in=R.audio_in,
                                 crf=crf.get(),
                                 rec_time=rec_time.get()*60.,
+                                fps=R.rec_fps,
                                 output_file=R.raw_path.get())
             R.running = False
+            # Restore display refresh rate now that screen capture is complete
+            restore_wayland_display_refresh_rate()
             # Drop out of fullscreen and stop to help keep !Machine working
             press_exit_fullscreen_keys()
+            if R.interrupted_for_fps_mismatch:
+                print('Recording stopped intentionally for framerate mismatch adjustment.')
+                thread_active.set(thread_active.get()-1)
+                return
             if rf and rr:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
                 sync()
+                trim()
                 if size_of(R.target_path.get()) > 0:
                     root.lift()
                     print('sending message')
@@ -636,6 +667,203 @@ def add_to_clip_board(text):
     pyperclip.copy(text)
 
 
+class FrameRateDecisionDialog(tk.Toplevel):
+    def __init__(self, parent, detected_fps=24, current_fps=60, was_stopped=False):
+        super().__init__(parent)
+        self.title("Recording Stopped: Source Framerate Mismatch" if was_stopped else "Source Framerate Detected")
+        self.result = 'keep_60'
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        frame = tk.Frame(self, padx=16, pady=16)
+        frame.pack(fill='both', expand=True)
+
+        header_text = (f"Recording Stopped Early: ~{detected_fps:.0f} fps Stream Detected"
+                       if was_stopped else
+                       f"Detected Source Stream Framerate: ~{detected_fps:.0f} fps")
+        header_color = "#C62828" if was_stopped else "#1565C0"
+
+        header = tk.Label(
+            frame,
+            text=header_text,
+            font=("Helvetica", 12, "bold"),
+            fg=header_color
+        )
+        header.pack(anchor="w", pady=(0, 8))
+
+        ratio = current_fps / detected_fps
+        prefix = ("Recording was stopped early (~6 seconds in) because the stream was detected as 24 fps content.\n"
+                  if was_stopped else
+                  "The active video stream appears to be 24 fps content.\n")
+        explanation = (
+            f"{prefix}"
+            f"Recording at {current_fps} fps produces 3:2 pulldown judder ({current_fps}/{detected_fps:.0f} = {ratio:.1f}x),\n"
+            f"causing alternating 2-frame and 3-frame holds (motion stutter).\n\n"
+            f"How would you like to handle this recording?\n\n"
+            f"• Auto-Smooth {detected_fps:.0f} fps (Recommended):\n"
+            f"  Restart recording at 60 fps for smooth GPU capture, then automatically decimate\n"
+            f"  redundant duplicate frames during post-processing to produce pristine {detected_fps:.0f} fps video.\n\n"
+            f"• Keep {current_fps} fps (Raw):\n"
+            f"  Restart recording at {current_fps} fps and preserve raw captured frames.\n\n"
+            f"• Native {detected_fps:.0f} fps:\n"
+            f"  Instruct the screen recorder to capture directly at {detected_fps:.0f} fps."
+        )
+        msg_label = tk.Label(frame, text=explanation, justify="left", font=("Helvetica", 10))
+        msg_label.pack(anchor="w", pady=(0, 16))
+
+        btn_frame = tk.Frame(frame)
+        btn_frame.pack(fill="x", pady=(8, 0))
+
+        def choose(choice):
+            self.result = choice
+            self.destroy()
+
+        b1 = tk.Button(
+            btn_frame,
+            text=f"Auto-Smooth {detected_fps:.0f} fps (Recommended)",
+            command=lambda: choose("auto_smooth"),
+            bg="#2E7D32",
+            fg="white",
+            font=("Helvetica", 10, "bold"),
+            padx=10, pady=5
+        )
+        b1.pack(side="left", padx=(0, 6))
+
+        b2 = tk.Button(
+            btn_frame,
+            text=f"Keep {current_fps} fps",
+            command=lambda: choose("keep_60"),
+            padx=8, pady=5
+        )
+        b2.pack(side="left", padx=4)
+
+        b3 = tk.Button(
+            btn_frame,
+            text=f"Native {detected_fps:.0f} fps",
+            command=lambda: choose("native_fps"),
+            padx=8, pady=5
+        )
+        b3.pack(side="left", padx=4)
+
+        b4 = tk.Button(
+            btn_frame,
+            text="Cancel",
+            command=lambda: choose("cancel"),
+            padx=8, pady=5
+        )
+        b4.pack(side="right", padx=(6, 0))
+
+        self.protocol("WM_DELETE_WINDOW", lambda: choose("cancel"))
+
+        self.update_idletasks()
+        try:
+            x = parent.winfo_rootx() + (parent.winfo_width() // 2) - (self.winfo_width() // 2)
+            y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (self.winfo_height() // 2)
+            self.geometry(f"+{max(0, x)}+{max(0, y)}")
+        except Exception:
+            pass
+
+        self.wait_window(self)
+
+
+def check_early_recording_framerate():
+    """Wait 3 seconds after recording begins, probe screen for 3.5s.
+    If 24/30 fps stream is detected with 60 fps recording, stop recording and prompt user.
+    """
+    time.sleep(3.0)
+    if not R.running or not R.run_perm or R.smooth_fps is not None:
+        return
+
+    print("Early check: probing screen for active playback framerate (~3.5s)...")
+    detected = probe_source_stream(R.video_grab, R.video_in, probe_duration=3.5)
+    print(f"Early check: detected motion fps = {detected}")
+    R.detected_source_fps = detected
+
+    if not R.running or not R.run_perm or R.smooth_fps is not None:
+        return
+
+    if detected and (20.0 <= detected <= 27.5 or 27.5 < detected <= 35.0):
+        target_fps = 24 if (20.0 <= detected <= 27.5) else 30
+        print(f"Early check: FPS mismatch detected (~{target_fps} fps stream on {R.rec_fps} fps capture). Stopping recording!")
+        root.after(0, lambda: _handle_early_fps_mismatch(target_fps))
+
+
+def _handle_early_fps_mismatch(target_fps):
+    if not R.running and not R.run_perm:
+        return
+    R.interrupted_for_fps_mismatch = True
+    R.kill(reason='fps_mismatch')
+    press_exit_fullscreen_keys()
+    root.lift()
+    root.focus_force()
+
+    dlg = FrameRateDecisionDialog(root, detected_fps=target_fps, current_fps=R.rec_fps, was_stopped=True)
+    choice = dlg.result
+
+    if choice == 'auto_smooth':
+        R.smooth_fps = target_fps
+        R.rec_fps = 60
+        print(f"FPS Mismatch resolved: Auto-Smooth {target_fps} fps chosen. Restarting recording...")
+        R.cast_button.config(bg=bg_color)
+        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
+        R.run_perm = True
+        countdown_time.set(min(R.countdown_time, 5))
+        cast_countdown()
+    elif choice == 'native_fps':
+        R.smooth_fps = None
+        R.rec_fps = target_fps
+        print(f"FPS Mismatch resolved: Native {target_fps} fps chosen. Restarting recording...")
+        R.cast_button.config(bg=bg_color)
+        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
+        R.run_perm = True
+        countdown_time.set(min(R.countdown_time, 5))
+        cast_countdown()
+    elif choice == 'keep_60':
+        R.smooth_fps = 'keep_60'
+        R.rec_fps = 60
+        print("FPS Mismatch resolved: User chose to keep 60 fps raw. Restarting recording...")
+        R.cast_button.config(bg=bg_color)
+        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
+        R.run_perm = True
+        countdown_time.set(min(R.countdown_time, 5))
+        cast_countdown()
+    else:
+        print("Recording stopped by user after framerate mismatch.")
+
+
+def probe_and_prompt_framerate(video_grab, video_in, parent=None):
+    """Probe the screen for ~3.5s, detect content framerate, and prompt user if 24 fps / 30 fps judder is likely.
+    Returns: (smooth_fps, rec_fps, should_proceed)
+    """
+    print("Probing active video stream for ~3.5 seconds...")
+    detected_fps = probe_source_stream(video_grab, video_in)
+    print(f"probe_source_stream: detected motion fps = {detected_fps}")
+    R.detected_source_fps = detected_fps
+    if detected_fps is None:
+        return None, 60, True
+
+    if 20.0 <= detected_fps <= 27.5:
+        target_stream_fps = 24
+    elif 27.5 < detected_fps <= 35.0:
+        target_stream_fps = 30
+    else:
+        # 60 fps or mostly static desktop
+        return None, 60, True
+
+    dlg = FrameRateDecisionDialog(parent or root, detected_fps=target_stream_fps, current_fps=60)
+    choice = dlg.result
+
+    if choice == 'auto_smooth':
+        return target_stream_fps, 60, True
+    elif choice == 'keep_60':
+        return None, 60, True
+    elif choice == 'native_fps':
+        return None, target_stream_fps, True
+    else:
+        return None, 60, False
+
+
 def cast():
     """After 'pushing the button' check if over-writing then start countdown"""
     check_dependencies_and_warn()
@@ -661,6 +889,15 @@ def cast():
             print('enter different folder or title first row')
             tk.messagebox.showwarning(message='enter different folder or title first row')
             return
+
+    # Probe source framerate and prompt user if 24/30 fps stream is detected
+    smooth_fps, rec_fps, should_proceed = probe_and_prompt_framerate(R.video_grab, R.video_in, parent=root)
+    if not should_proceed:
+        print("Recording cancelled by user at framerate prompt.")
+        return
+    R.smooth_fps = smooth_fps
+    R.rec_fps = rec_fps
+
     R.cast_button.config(bg=bg_color)
     R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
     R.run_perm = True
@@ -771,6 +1008,34 @@ def enter_stop_clip_time():
     tuners.stop_clip_butt.config(text=stop_clip.get())
 
 
+def enter_trim_start():
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds to discard from beginning",
+                                      initialvalue=trim_start.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    if answer < 0.0:
+        answer = 0.0
+    trim_start.set(float(answer))
+    cf[SYS]['trim_start'] = str(trim_start.get())
+    cf.save_to_file()
+    tuners.trim_start_butt.config(text=str(trim_start.get()))
+
+
+def enter_trim_end():
+    answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds to discard from end",
+                                      initialvalue=trim_end.get())
+    if answer is None or answer == ():
+        print('enter operation cancelled')
+        return
+    if answer < 0.0:
+        answer = 0.0
+    trim_end.set(float(answer))
+    cf[SYS]['trim_end'] = str(trim_end.get())
+    cf.save_to_file()
+    tuners.trim_end_butt.config(text=str(trim_end.get()))
+
+
 def enter_video_delay():
     answer = tk.simpledialog.askfloat(title=__file__, prompt="enter seconds video delay audio +/-",
                                       initialvalue=video_delay.get())
@@ -846,14 +1111,29 @@ def handle_silent(*_args):
     cf.save_to_file()
 
 
+def close_tuner_window():
+    if tuners.window is not None:
+        try:
+            tuners.window.destroy()
+        except Exception:
+            pass
+        tuners.window = None
+
+
 def open_tuner_window():
     if tuners.window is not None:
-        print(f"Tuner already open")
-        tuners.window.lift()
-        return
+        try:
+            if tuners.window.winfo_exists():
+                print(f"Tuner already open")
+                tuners.window.lift()
+                return
+        except Exception:
+            pass
+        tuners.window = None
 
     tuners.window = tk.Toplevel(root, bg=bg_color)
     tuners.window.title("Tuner")
+    tuners.window.protocol("WM_DELETE_WINDOW", close_tuner_window)
     # tuners.window.geometry("700x200")
 
     # Video delay row
@@ -916,25 +1196,49 @@ def open_tuner_window():
     sync_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
     sync_frame.pack(side=tk.TOP)
     tuners.sync_tuner_butt = myButton(sync_frame, text="***  SYNC    ***", command=sync, bg='red', fg='white')
-    sync_label = tk.Label(sync_frame, text="Sync =", bg=bg_color)
+    sync_label = tk.Label(sync_frame, text="Sync (Trim input) =", bg=bg_color)
     tuners.out_path_label = tk.Label(sync_frame, text=R.out_file, wraplength=wrap_length, justify=tk.RIGHT)
     tuners.out_path_label.config(bg=bg_color)
     tuners.sync_tuner_butt.pack(side="left", fill='x')
     sync_label.pack(side="left", fill='x')
     tuners.out_path_label.pack(side="left", fill='x')
 
+    # Trim discard row
+    trim_discard_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    trim_discard_frame.pack(side=tk.TOP)
+    trim_discard_label = tk.Label(trim_discard_frame, text="Trim discard, seconds (start / end):", bg=bg_color)
+    tuners.trim_start_butt = myButton(trim_discard_frame, text=str(trim_start.get()),
+                                      command=enter_trim_start, fg="green", bg=bg_color)
+    tuners.trim_end_butt = myButton(trim_discard_frame, text=str(trim_end.get()),
+                                    command=enter_trim_end, fg="green", bg=bg_color)
+    trim_discard_label.pack(side="left", fill='x')
+    tuners.trim_start_butt.pack(side="left", fill='x')
+    tuners.trim_end_butt.pack(side="left", fill='x')
+
+    # Trim main (just below trim specs)
+    trim_frame = tk.Frame(tuners.window, width=250, height=100, bg=box_color, bd=4, relief=relief)
+    trim_frame.pack(side=tk.TOP)
+    tuners.trim_tuner_butt = myButton(trim_frame, text="***  TRIM    ***", command=trim, bg='red', fg='white')
+    trim_label = tk.Label(trim_frame, text="Trim =", bg=bg_color)
+    tuners.trim_path_label = tk.Label(trim_frame, text=trim_file.get(), wraplength=wrap_length, justify=tk.RIGHT)
+    tuners.trim_path_label.config(bg=bg_color)
+    tuners.trim_tuner_butt.pack(side="left", fill='x')
+    trim_label.pack(side="left", fill='x')
+    tuners.trim_path_label.pack(side="left", fill='x')
+
     # Instructions
     tuner_doc_frame = tk.Frame(tuners.window, width=250, height=100, bg=bg_color, bd=4, relief=relief)
     tuner_doc_frame.pack(side=tk.TOP)
-    tuner_doc = """Tune for video / audio sync.\n\
-    - Set range to be within the length of original video.\n\
-    - Press 'CLIP IT'.\n\
-    - Go to file explorer and verify sync.   Adjust 'Video delay +/-' as necessary."""
+    tuner_doc = """Tune for video / audio sync and trimming.\n\
+    - Set clip range to test snippet with 'CLIP IT' and 'SYNC CLIP'.\n\
+    - Adjust 'Video delay +/-' as necessary to synchronize.\n\
+    - Press '*** SYNC ***' to synchronize full video (..._sync.mp4).\n\
+    - Discard trimmings: Set seconds to discard from beginning and end.\n\
+    - Press '*** TRIM ***' to produce trimmed video (...mp4)."""
     tuner_doc = tk.Label(tuner_doc_frame, text=tuner_doc, fg="black", justify='left', bg=bg_color)
     tuner_doc.pack(side="left", fill='x')
 
     handle_clip_path()
-    clip_path.trace_add('write', handle_clip_path)
     handle_raw_path()
     tuners.open = True
 
@@ -966,6 +1270,10 @@ def print_vars():
     print(f"{start_clip.get()=}")
     print(f"{stop_clip.get()=}")
     print(f"{thread_active.get()=}")
+    print(f"{trim_file.get()=}")
+    print(f"{trim_path.get()=}")
+    print(f"{trim_start.get()=}")
+    print(f"{trim_end.get()=}")
     print(f"{video_delay.get()=}")
 
 
@@ -1025,35 +1333,177 @@ def stay_awake(up_set_min=3.):
     print(f"stay_awake: ending")
 
 
+def _check_and_prompt_sync_smoothing(raw_filepath, default_fps=None):
+    """Check raw recording for 24/30 fps content if default_fps was not already chosen."""
+    container_fps = get_video_container_fps(raw_filepath)
+    print(f"sync: container fps = {container_fps:.2f}")
+
+    # If the recording container is ALREADY at native cinema rate (<= 32 fps), no smoothing needed!
+    if container_fps > 0 and container_fps <= 32.0:
+        print(f"sync: Recording is already native low framerate ({container_fps:.1f} fps). Skipping decimation.")
+        return None
+
+    if default_fps == 'keep_60':
+        return None
+    if default_fps is not None:
+        return default_fps
+
+    print("Analyzing raw recording motion framerate...")
+    detected = detect_video_stream_framerate(raw_filepath)
+    print(f"sync: detected raw motion rate = {detected}")
+    if detected and (20.0 <= detected <= 27.5):
+        try:
+            ans = tk.messagebox.askyesno(
+                title="Motion Stutter Detected (24 fps)",
+                message=(
+                    f"Detected ~24 fps film/video content in this recording.\n\n"
+                    f"Because it was recorded at {container_fps:.0f} fps, 3:2 pulldown judder is present.\n\n"
+                    f"Would you like to Auto-Smooth it to 24 fps to eliminate stutter?"
+                ),
+                parent=root
+            )
+            if ans:
+                return 24
+        except Exception:
+            pass
+    elif detected and (27.5 < detected <= 35.0):
+        try:
+            ans = tk.messagebox.askyesno(
+                title="Motion Stutter Detected (30 fps)",
+                message=(
+                    f"Detected ~30 fps video content in this recording.\n\n"
+                    f"Would you like to Auto-Smooth it to 30 fps to eliminate stutter?"
+                ),
+                parent=root
+            )
+            if ans:
+                return 30
+        except Exception:
+            pass
+    return None
+
+
 def sync():
     if size_of(R.raw_path.get()) > 0:
+        target_fps = _check_and_prompt_sync_smoothing(R.raw_path.get(), R.smooth_fps)
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=R.raw_path.get(),
-                             output_file=R.out_path)
+                             output_file=R.out_path, target_fps=target_fps, crf=crf.get())
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
-                             output_file=R.out_path)
+                             output_file=R.out_path, target_fps=target_fps, crf=crf.get())
+        sync_dest_path = os.path.join(R.destination_folder, R.out_file)
         if size_of(R.out_path) > 0:
-            try:
-                shutil.move(R.out_path, R.target_path.get())
-                print("Moved synchronized result to ", R.target_path.get())
-            except FileNotFoundError:
-                print(f"is Lib drive plugged in?????????")
-                tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
+            if os.path.abspath(R.out_path) != os.path.abspath(sync_dest_path):
+                try:
+                    shutil.move(R.out_path, sync_dest_path)
+                    print("Moved synchronized result to ", sync_dest_path)
+                except FileNotFoundError:
+                    print(f"is Lib drive plugged in?????????")
+                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
         update_all_file_paths()
     else:
         print("record first *******")
 
 
+def trim():
+    sync_dest_path = os.path.join(R.destination_folder, R.out_file)
+    source_file = None
+    needs_sync = False
+    if size_of(sync_dest_path) > 0:
+        source_file = sync_dest_path
+        needs_sync = False
+    elif size_of(R.out_path) > 0:
+        source_file = R.out_path
+        needs_sync = False
+    elif size_of(R.raw_path.get()) > 0:
+        ans = tk.messagebox.askyesno(
+            title="Sync File Required",
+            message=f"Sync file '{R.out_file}' not found.\n\nWould you like to run SYNC now to create it before trimming?"
+        )
+        if ans:
+            sync()
+            if size_of(sync_dest_path) > 0:
+                source_file = sync_dest_path
+            elif size_of(R.out_path) > 0:
+                source_file = R.out_path
+            else:
+                return
+        else:
+            return
+    else:
+        print("record first *******")
+        tk.messagebox.showinfo(title='Screencast', message='Please record and sync first. Trimming requires the synchronized (Sync=) file.')
+        return
+
+    trim_out_file = trim_file.get()
+    trim_out_path = os.path.join(R.folder, trim_out_file)
+    trim_dest_path = os.path.join(R.destination_folder, trim_out_file)
+
+    temp_sync_file = None
+    file_to_trim = source_file
+    try:
+        paint(tuners.trim_tuner_butt, bg='yellow', fg='black')
+        tuners.trim_tuner_butt.config(text="TRIMMING...")
+        root.update()
+
+        if needs_sync and abs(video_delay.get()) > 0.001:
+            temp_sync_file = os.path.join(R.folder, R.title + '_temp_sync.mp4')
+            target_fps = _check_and_prompt_sync_smoothing(source_file, R.smooth_fps)
+            if video_delay.get() >= 0.0:
+                delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=source_file,
+                                 output_file=temp_sync_file, target_fps=target_fps, crf=crf.get())
+            else:
+                delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=source_file,
+                                 output_file=temp_sync_file, target_fps=target_fps, crf=crf.get())
+            if size_of(temp_sync_file) > 0:
+                file_to_trim = temp_sync_file
+            else:
+                print("Failed to sync intermediate file for trimming")
+                tk.messagebox.showerror(title='Trim Error', message='Failed to synchronize intermediate file for trimming.')
+                return
+
+        success, msg = trim_video(input_file=file_to_trim, output_file=trim_out_path,
+                                  trim_start=trim_start.get(), trim_end=trim_end.get(),
+                                  crf=crf.get(), silent=silent.get())
+        if not success:
+            tk.messagebox.showerror(title='Trim Error', message=msg)
+            return
+
+        if size_of(trim_out_path) > 0:
+            if os.path.abspath(trim_out_path) != os.path.abspath(trim_dest_path):
+                try:
+                    shutil.move(trim_out_path, trim_dest_path)
+                    print("Moved trimmed result to ", trim_dest_path)
+                except FileNotFoundError:
+                    print(f"is Lib drive plugged in?????????")
+                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
+            else:
+                print("Trimmed result is in ", trim_out_path)
+
+        update_all_file_paths()
+    finally:
+        paint(tuners.trim_tuner_butt, bg='red', fg='white')
+        tuners.trim_tuner_butt.config(text="***  TRIM    ***")
+        if temp_sync_file and os.path.exists(temp_sync_file):
+            try:
+                os.remove(temp_sync_file)
+            except Exception:
+                pass
+
+
 def sync_clip():
     print(f"{raw_clip_path.get()=}")
     if size_of(raw_clip_path.get()) > 0:
+        target_fps = _check_and_prompt_sync_smoothing(raw_clip_path.get(), R.smooth_fps)
         if video_delay.get() >= 0.0:
             delay_video_sync(silent=silent.get(), delay=video_delay.get(), input_file=raw_clip_path.get(),
-                             output_file=os.path.join(os.getcwd(), clip_path.get()))
+                             output_file=os.path.join(os.getcwd(), clip_path.get()),
+                             target_fps=target_fps, crf=crf.get())
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_clip_path.get(),
-                             output_file=os.path.join(os.getcwd(), clip_path.get()))
+                             output_file=os.path.join(os.getcwd(), clip_path.get()),
+                             target_fps=target_fps, crf=crf.get())
         update_all_file_paths()
     else:
         print("record clip first *******")
@@ -1082,6 +1532,19 @@ def update_all_file_paths():
         paint(tuners.clip_path_label, bg=bg_color)
     clip_file.set(R.title + '_clip.mp4')
     clip_path.set(os.path.join(R.folder, clip_file.get()))
+    trim_file.set(R.title + '.mp4')
+    trim_path.set(os.path.join(R.folder, trim_file.get()))
+    trim_dest = os.path.join(R.destination_folder, trim_file.get())
+    if size_of(trim_path.get()) > 0 or size_of(trim_dest) > 0:
+        paint(tuners.trim_path_label, bg='yellow')
+    else:
+        paint(tuners.trim_path_label, bg=bg_color)
+    tuners.trim_path_label.config(text=trim_file.get())
+    sync_dest = os.path.join(R.destination_folder, R.out_file)
+    if size_of(R.out_path) > 0 or size_of(sync_dest) > 0:
+        paint(tuners.out_path_label, bg='yellow')
+    else:
+        paint(tuners.out_path_label, bg=bg_color)
 
 
 def check_git_newer_version(verbose=False):
@@ -1149,6 +1612,8 @@ if __name__ == '__main__':
                             "audio_in": '<run "ffmpeg -sources pulse" choose "Monitor of Loopback">',
                             "silent": '0',
                             "instructions": '0',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.5'},
                 'Linux_Wayland': {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
@@ -1161,6 +1626,8 @@ if __name__ == '__main__':
                             "audio_in": '<run "ffmpeg -sources pulse" choose "Monitor of Loopback">',
                             "silent": '0',
                             "instructions": '0',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.5'},
                 'Windows': {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
@@ -1173,6 +1640,8 @@ if __name__ == '__main__':
                             "audio_in": 'audio="CABLE Output (VB-Audio Virtual Cable)"',
                             "silent": '0',
                             "instructions": '0',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.0'},
                 'Darwin':  {"folder": '<enter working folder>',
                             "destination_folder": '<enter destination folder>',
@@ -1185,6 +1654,8 @@ if __name__ == '__main__':
                             "audio_in": '2',
                             "silent": '0',
                             "instructions": '0',
+                            "trim_start": '0.0',
+                            "trim_end": '0.0',
                             "video_delay": '0.0'},
                 }
     cf = Begini(__file__, def_dict)
@@ -1289,7 +1760,7 @@ if __name__ == '__main__':
         print('os unknown')
 
     # Frame properties
-    min_width = 600
+    min_width = 800
     main_height = 500
     wrap_length = 800
     bg_color = "lightgray"
@@ -1302,12 +1773,14 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title('Screencast')
     root.wm_minsize(width=min_width, height=main_height)
-    root.iconphoto(False, tk.PhotoImage(file='screencast.png'))
+    script_loc = os.path.dirname(os.path.abspath(__file__))
+    root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+                   if os.path.exists(os.path.join(script_loc, 'GUI_screencast_Icon.png'))
+                   else tk.PhotoImage(file=os.path.join(script_loc, 'screencast.png')))
     counter = tk.Tk()
     counter.attributes('-topmost', True)
     thread_active = tk.IntVar(root, 0)
     tuners = Global(root)
-    script_loc = os.path.dirname(os.path.abspath(__file__))
     cwd_path = tk.StringVar(root, os.getcwd())
     rec_time = tk.DoubleVar(root, float(cf[SYS]['rec_time']))
     crf = tk.IntVar(root, int(cf[SYS]['crf']))
@@ -1320,15 +1793,16 @@ if __name__ == '__main__':
         instructions = tk.BooleanVar(root, False)
     else:
         instructions = tk.BooleanVar(root, True)
-    root.iconphoto(False, tk.PhotoImage(file=os.path.join(script_loc, 'GUI_screencast_Icon.png'))
-                   if os.path.exists(os.path.join(script_loc, 'GUI_screencast_Icon.png'))
-                   else tk.PhotoImage(file=os.path.join(script_loc, 'screencast.png')))
     raw_time = tk.DoubleVar(root, 0.)
     hms = tk.StringVar(root, '')
     raw_clip_file = tk.StringVar(root)
     raw_clip_path = tk.StringVar(root)
     clip_file = tk.StringVar(root)
     clip_path = tk.StringVar(root)
+    trim_file = tk.StringVar(root)
+    trim_path = tk.StringVar(root)
+    trim_start = tk.DoubleVar(root, float(cf[SYS].get('trim_start', '0.0')))
+    trim_end = tk.DoubleVar(root, float(cf[SYS].get('trim_end', '0.0')))
     # hms_label = tk.Label(root)
     # Validate that configured Wayland recorder is available, fallback to detected one if missing
     video_grab_init = cf[SYS]['video_grab']
@@ -1359,8 +1833,99 @@ if __name__ == '__main__':
     # row = -1
 
     # Root
-    outer_frame = tk.Frame(root, bd=5, bg=bg_color)
-    outer_frame.pack(fill='x')
+    main_frame = tk.Frame(root, bd=2, bg=bg_color)
+    main_frame.pack(fill='both', expand=True)
+
+    # Left: recording controls
+    outer_frame = tk.Frame(main_frame, bd=2, bg=bg_color)
+    outer_frame.pack(side=tk.LEFT, fill='both', expand=True)
+
+    # Right: display panel showing current frame rates
+    fps_panel = tk.LabelFrame(
+        main_frame,
+        text=" Frame Rates ",
+        font=("Helvetica", 10, "bold"),
+        bg=bg_color,
+        fg="#1565C0",
+        padx=12,
+        pady=8,
+        bd=2,
+        relief=tk.GROOVE
+    )
+    fps_panel.pack(side=tk.RIGHT, fill='y', padx=(6, 12), pady=6, anchor='n')
+
+    # Display Refresh Rate
+    disp_title = tk.Label(fps_panel, text="Display Refresh:", font=("Helvetica", 9, "bold"), bg=bg_color, anchor="w")
+    disp_title.pack(fill="x", pady=(2, 0))
+    disp_val = tk.Label(fps_panel, text="-- Hz", font=("Helvetica", 10), bg=bg_color, fg="#0D47A1", anchor="w")
+    disp_val.pack(fill="x", pady=(0, 6))
+
+    # Recorder Rate
+    rec_title = tk.Label(fps_panel, text="Recorder Rate:", font=("Helvetica", 9, "bold"), bg=bg_color, anchor="w")
+    rec_title.pack(fill="x", pady=(2, 0))
+    rec_val = tk.Label(fps_panel, text=f"{R.rec_fps} fps", font=("Helvetica", 10), bg=bg_color, fg="#1B5E20", anchor="w")
+    rec_val.pack(fill="x", pady=(0, 6))
+
+    # Detected Source Rate
+    source_title = tk.Label(fps_panel, text="Detected Source:", font=("Helvetica", 9, "bold"), bg=bg_color, anchor="w")
+    source_title.pack(fill="x", pady=(2, 0))
+    source_val = tk.Label(fps_panel, text="Not probed", font=("Helvetica", 10), bg=bg_color, fg="#E65100", anchor="w")
+    source_val.pack(fill="x", pady=(0, 6))
+
+    # Auto-Smooth Setting
+    smooth_title = tk.Label(fps_panel, text="Auto-Smooth:", font=("Helvetica", 9, "bold"), bg=bg_color, anchor="w")
+    smooth_title.pack(fill="x", pady=(2, 0))
+    smooth_val = tk.Label(fps_panel, text="Auto (Prompt)", font=("Helvetica", 10), bg=bg_color, fg="#4A148C", anchor="w")
+    smooth_val.pack(fill="x", pady=(0, 8))
+
+    # Separator
+    sep = tk.Frame(fps_panel, height=1, bg="#BDBDBD", bd=0)
+    sep.pack(fill="x", pady=(2, 8))
+
+    def _on_manual_probe():
+        def _countdown(remaining):
+            if remaining > 0:
+                source_val.config(text=f"Switch in {remaining}s...", fg="#D84315")
+                root.after(1000, _countdown, remaining - 1)
+            else:
+                source_val.config(text="Probing ~3.5s...", fg="#D84315")
+                def _bg_probe():
+                    fps = probe_source_stream(R.video_grab, R.video_in, probe_duration=3.5)
+                    R.detected_source_fps = fps
+                    root.after(0, update_fps_panel)
+                Thread(target=_bg_probe, daemon=True).start()
+        _countdown(5)
+
+    probe_butt = myButton(fps_panel, text="Probe Stream", command=_on_manual_probe, bg=bg_color, fg="black")
+    probe_butt.pack(fill="x", pady=2)
+
+    def update_fps_panel():
+        try:
+            # Display rate
+            info = get_wayland_display_info() if is_wayland_session() else None
+            if info and 'current_hz' in info:
+                disp_val.config(text=f"{info['current_hz']:.1f} Hz ({info.get('output', 'display')})")
+            else:
+                disp_val.config(text="Native / Default")
+
+            # Recorder fps
+            rec_val.config(text=f"{R.rec_fps} fps")
+
+            # Source fps
+            if R.detected_source_fps is not None:
+                source_val.config(text=f"~{R.detected_source_fps:.1f} fps")
+            else:
+                source_val.config(text="Not probed / Idle")
+
+            # Auto-Smooth status
+            if R.smooth_fps in (24, 30):
+                smooth_val.config(text=f"Active ({R.smooth_fps} fps)", fg="#2E7D32")
+            elif R.smooth_fps == 'keep_60':
+                smooth_val.config(text="Off (Keep 60 fps)", fg="#616161")
+            else:
+                smooth_val.config(text="Auto (Prompt)", fg="#4A148C")
+        except Exception as e:
+            print(f"update_fps_panel error: {e}")
 
     # Image row
     pic_frame = tk.Frame(outer_frame, bd=5, bg=bg_color)
@@ -1490,6 +2055,7 @@ if __name__ == '__main__':
     def _periodic_dependency_check():
         try:
             check_dependencies_and_warn()
+            update_fps_panel()
         except Exception:
             pass
         root.after(2000, _periodic_dependency_check)
@@ -1507,6 +2073,15 @@ if __name__ == '__main__':
     instructions.trace_add('write', handle_instructions)
     handle_new_result_ready()
     R.new_result_ready.trace_add('write', handle_new_result_ready)
+    update_fps_panel()
+    def _on_close():
+        try:
+            restore_wayland_display_refresh_rate()
+        except Exception:
+            pass
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", _on_close)
     root.mainloop()
     counter.mainloop()
     counter.withdraw()

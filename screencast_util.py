@@ -83,6 +83,11 @@ def detect_wayland_recorder():
     return 'gpu-screen-recorder'
 
 
+_original_display_info = None
+_display_rate_changed = False
+
+
+
 def strip_ansi(text):
     """Strip ANSI color/escape sequences from command output."""
     return re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
@@ -247,12 +252,16 @@ def set_wayland_display_refresh_rate(info, target_hz=None):
 
 def check_and_prompt_display_refresh_rate(parent=None):
     """Check Wayland display refresh rate. If > 62 Hz, prompt user to set it to 60 Hz."""
+    global _original_display_info, _display_rate_changed
     if not is_wayland_session():
         return True
 
     info = get_wayland_display_info()
     if not info:
         return True
+
+    if _original_display_info is None:
+        _original_display_info = info.copy()
 
     current_hz = info.get('current_hz', 60.0)
     if current_hz <= 62.0:
@@ -280,6 +289,7 @@ def check_and_prompt_display_refresh_rate(parent=None):
     if answer:
         success, err = set_wayland_display_refresh_rate(info, target_hz=target_hz)
         if success:
+            _display_rate_changed = True
             try:
                 tkinter.messagebox.showinfo(
                     title="Display Refresh Rate",
@@ -315,6 +325,128 @@ def check_and_prompt_display_refresh_rate(parent=None):
         except Exception:
             pass
         return True
+
+
+def restore_wayland_display_refresh_rate():
+    """Restore Wayland display refresh rate to original value if it was modified."""
+    global _original_display_info, _display_rate_changed
+    if not is_wayland_session() or not _display_rate_changed or not _original_display_info:
+        return True
+
+    orig_hz = _original_display_info.get('current_hz')
+    output = _original_display_info.get('output', 'display')
+    if orig_hz:
+        print(f"Restoring display '{output}' to original refresh rate: {orig_hz:.1f} Hz...")
+        success, msg = set_wayland_display_refresh_rate(_original_display_info, target_hz=orig_hz)
+        if success:
+            print(f"Display '{output}' restored to {orig_hz:.1f} Hz.")
+            _display_rate_changed = False
+            _original_display_info = None
+            return True
+        else:
+            print(f"Failed to restore display refresh rate: {msg}")
+            return False
+    return True
+
+
+def detect_video_stream_framerate(video_file, max_duration=6):
+    """Analyze a recorded video file with ffmpeg mpdecimate to determine unique motion fps.
+    Samples multiple points across the file to avoid startup noise or static title screens.
+    Returns estimated fps (float) or None.
+    """
+    if not video_file or not os.path.isfile(video_file) or os.path.getsize(video_file) == 0:
+        return None
+
+    # Get total video duration
+    dur = 0.0
+    try:
+        dur_cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                   '-of', 'default=noprint_wrappers=1:nokey=1', str(video_file)]
+        dur_out = subprocess.check_output(dur_cmd, text=True, timeout=5).strip()
+        dur = float(dur_out)
+    except Exception:
+        dur = 0.0
+
+    # Determine probe sample points (start seconds and sample duration)
+    sample_points = []
+    if dur > 30.0:
+        # Sample across active parts of the video: e.g. 8%, 20%, 35% of total duration
+        sample_dur = min(max_duration, 6.0)
+        p1 = max(15.0, dur * 0.08)
+        p2 = max(35.0, dur * 0.20)
+        p3 = max(60.0, dur * 0.35)
+        sample_points = [(p1, sample_dur), (p2, sample_dur), (p3, sample_dur)]
+    elif dur > 6.0:
+        # Short video: skip first 2 seconds to avoid startup buffering/switching
+        sample_points = [(2.0, min(max_duration, dur - 2.5))]
+    else:
+        sample_points = [(0.5 if dur > 2.0 else 0.0, max_duration)]
+
+    measured_rates = []
+    for ss, s_dur in sample_points:
+        cmd = [
+            'ffmpeg', '-ss', f'{ss:.1f}', '-t', f'{s_dur:.1f}',
+            '-i', str(video_file),
+            '-vf', 'mpdecimate',
+            '-loglevel', 'info',
+            '-f', 'null', '-'
+        ]
+        try:
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15)
+            matches = re.findall(r'frame=\s*(\d+).*?time=(\d+):(\d+):([\d\.]+)', res.stderr)
+            if matches:
+                frame_str, h, m, s = matches[-1]
+                frames = int(frame_str)
+                actual_dur = int(h) * 3600 + int(m) * 60 + float(s)
+                if actual_dur > 0.5:
+                    rate = frames / actual_dur
+                    measured_rates.append(round(rate, 2))
+        except Exception as e:
+            print(f"detect_video_stream_framerate sampling error at ss={ss}: {e}")
+
+    if not measured_rates:
+        return None
+
+    active_rates = [r for r in measured_rates if r > 5.0]
+    if not active_rates:
+        return round(sum(measured_rates) / len(measured_rates), 2)
+
+    # Check if samples cluster around ~24 fps (20.0 - 27.0 fps)
+    film_rates = [r for r in active_rates if 20.0 <= r <= 27.0]
+    if film_rates:
+        return round(sum(film_rates) / len(film_rates), 2)
+
+    # Check if samples cluster around ~30 fps (27.5 - 33.5 fps)
+    video_rates = [r for r in active_rates if 27.5 <= r <= 33.5]
+    if video_rates:
+        return round(sum(video_rates) / len(video_rates), 2)
+
+    return round(sum(active_rates) / len(active_rates), 2)
+
+
+def get_video_container_fps(video_file):
+    """Get the container frame rate of a video file using ffprobe."""
+    if not video_file or not os.path.isfile(video_file) or os.path.getsize(video_file) == 0:
+        return 0.0
+    cmd = [
+        'ffprobe', '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=r_frame_rate',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        str(video_file)
+    ]
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+        val = res.stdout.strip()
+        if '/' in val:
+            num, den = val.split('/')
+            return float(num) / float(den) if float(den) > 0 else 0.0
+        return float(val) if val else 0.0
+    except Exception:
+        return 0.0
+
+
+
 
 
 def str2bool(string):

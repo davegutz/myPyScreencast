@@ -22,6 +22,7 @@ import shutil
 import time
 import timeit
 import platform
+import subprocess
 # import tkinter as tk
 from screencast_util import *
 from tkinter import messagebox
@@ -91,17 +92,81 @@ def cut_clip(waiting=False, silent=True, conversation=False,
     return clip_file, result_ready
 
 
-# Delay audio to sync with video
-def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
-    print(f"{delay=} {input_file=} {output_file=} {silent=}")
+# Trim specified seconds from beginning and end of a video file
+def trim_video(input_file=None, output_file=None, trim_start=0.0, trim_end=0.0,
+               crf=22, silent=True):
+    """Trim specified seconds from beginning and end of a video file.
 
-    # arg2 = 'ffmpeg -i output.mkv -itsoffset 1.0 -i output.mkv -c:a copy -c:v copy -map 0:a:0
-    # -map 1:v:0 -y output_sync.mkv'
+    trim_start: seconds to discard from beginning (>= 0.0)
+    trim_end: seconds to discard from end (>= 0.0)
+    """
+    if not input_file or not os.path.isfile(input_file) or os.path.getsize(input_file) == 0:
+        print(f"trim_video: input file not found or empty: {input_file}")
+        return False, "Input file not found or empty"
+
+    total_dur = 0.0
+    try:
+        dur_cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                   '-of', 'default=noprint_wrappers=1:nokey=1', str(input_file)]
+        dur_out = subprocess.check_output(dur_cmd, text=True, timeout=10).strip()
+        total_dur = float(dur_out)
+    except Exception:
+        total_dur = length_of(input_file, silent=True) * 60.0
+
+    if total_dur <= 0.0:
+        return False, f"Could not determine duration of {input_file}"
+
+    trim_start = max(0.0, float(trim_start))
+    trim_end = max(0.0, float(trim_end))
+
+    if trim_start + trim_end >= total_dur:
+        msg = f"Trim discard ({trim_start + trim_end:.1f}s) >= video duration ({total_dur:.1f}s)"
+        print(f"trim_video error: {msg}")
+        return False, msg
+
+    target_dur = total_dur - trim_start - trim_end
+    print(f"trim_video: {input_file} -> {output_file}")
+    print(f"total duration: {total_dur:.2f}s, discarding start: {trim_start:.2f}s, end: {trim_end:.2f}s, result duration: {target_dur:.2f}s")
+
+    command = ('ffmpeg -ss {:5.2f}'.format(trim_start) +
+               ' -i "{:s}"'.format(input_file) +
+               ' -t {:5.2f}'.format(target_dur) +
+               ' -c copy -avoid_negative_ts make_zero -movflags +faststart -y "{:s}"'.format(output_file))
+
+    if not silent:
+        print(command + '\n')
+        print(Colors.bg.brightblack, Colors.fg.wheat)
+        result = run_shell_cmd(command, silent=silent)
+        print(Colors.reset)
+        if result == -1:
+            print(Colors.fg.blue, 'failed.', Colors.reset)
+            return False, "ffmpeg trim failed"
+        print(Colors.fg.orange, "  The trimmed result is in ", Colors.fg.blue, output_file, Colors.reset)
+    else:
+        result = run_shell_cmd(command, silent=silent)
+        if result == -1:
+            return False, "ffmpeg trim failed"
+
+    if not os.path.isfile(output_file) or os.path.getsize(output_file) == 0:
+        return False, "Trim output file not created or empty"
+
+    return True, "Success"
+
+
+# Delay audio to sync with video
+def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True, target_fps=None, crf=22):
+    print(f"{delay=} {input_file=} {output_file=} {silent=} {target_fps=} {crf=}")
+
+    filter_opts = ''
+    codec_opts = '-c:v copy'
+    if target_fps:
+        filter_opts = '-filter:v "mpdecimate" -fps_mode vfr '
+        codec_opts = f'-c:v libx264 -preset veryfast -crf {crf}'
 
     command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
                ' -i "{:s}"'.format(input_file) +
-               ' -c:v copy -map 0:v:0 -map 1:a:0 ' +
+               ' ' + filter_opts + codec_opts + ' -c:a copy -map 0:v:0 -map 1:a:0 ' +
                ' -y "{:s}"'.format(output_file))
 
     # start_time = timeit.default_timer()
@@ -124,11 +189,19 @@ def delay_audio_sync(delay=0.0, input_file=None, output_file=None, silent=True):
 
 
 # Delay video to sync with audio
-def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True):
+def delay_video_sync(delay=0.0, input_file=None, output_file=None, silent=True, target_fps=None, crf=22):
+    print(f"{delay=} {input_file=} {output_file=} {silent=} {target_fps=} {crf=}")
+
+    filter_opts = ''
+    codec_opts = '-c:v copy'
+    if target_fps:
+        filter_opts = '-filter:v "mpdecimate" -fps_mode vfr '
+        codec_opts = f'-c:v libx264 -preset veryfast -crf {crf}'
+
     command = ('ffmpeg -i "{:s}"'.format(input_file) +
                " -itsoffset {:5.3f}".format(delay) +
                ' -i "{:s}"'.format(input_file) +
-               ' -c:v copy -map 0:a:0 -map 1:v:0 ' +
+               ' ' + filter_opts + codec_opts + ' -c:a copy -map 0:a:0 -map 1:v:0 ' +
                ' -y "{:s}"'.format(output_file))
 
     start_time = timeit.default_timer()
@@ -180,7 +253,8 @@ def length_of(input_file: str, silent=True, save_stdout=True):
 def kill_ffmpeg(sys_=None, silent=True):
     command = ''
     if sys_ in ('Linux', 'Linux_Wayland') or (sys_ and sys_.startswith('Linux')):
-        command = 'pkill -e -f "(ffmpeg|gpu-screen-recorder|wf-recorder|wl-screenrec)"'
+        # Send SIGINT first so recorders flush headers and write mp4 moov atom
+        command = 'pkill -INT -e -f "(ffmpeg|gpu-screen-recorder|wf-recorder|wl-screenrec)"'
     elif sys_ == 'Windows':
         command = 'taskkill /f /im ffmpeg.exe'
     elif sys_ == 'Darwin':
@@ -201,15 +275,57 @@ def kill_ffmpeg(sys_=None, silent=True):
     return result
 
 
+def probe_source_stream(video_grabber="gpu-screen-recorder", video_in="portal", probe_duration=3.5, probe_file="/tmp/screencast_probe.mp4"):
+    """Record a short probe clip to detect the active video stream framerate."""
+    try:
+        if os.path.exists(probe_file):
+            try:
+                os.remove(probe_file)
+            except Exception:
+                pass
+
+        if video_grabber == 'gpu-screen-recorder':
+            gsr_cmd = get_gpu_screen_recorder_cmd()
+            # For screen probing, use KMS direct grab (-w screen) so it never blocks on
+            # portal permissions or conflicts with an active portal recording session.
+            cmd = f'timeout -s INT {probe_duration:.1f}s {gsr_cmd} -w screen -f 60 -o "{probe_file}"'
+        elif video_grabber == 'wf-recorder':
+            cmd = f'timeout -s INT {probe_duration:.1f}s wf-recorder -r 60 -f "{probe_file}"'
+        elif video_grabber == 'wl-screenrec':
+            cmd = f'timeout -s INT {probe_duration:.1f}s wl-screenrec --filename "{probe_file}"'
+        elif video_grabber == 'x11grab':
+            cmd = f'ffmpeg -framerate 60 -f x11grab -i "{video_in}" -t {probe_duration:.1f} -y "{probe_file}"'
+        elif video_grabber == 'gdigrab':
+            cmd = f'ffmpeg -framerate 60 -f gdigrab -i "{video_in}" -t {probe_duration:.1f} -y "{probe_file}"'
+        else:
+            return None
+
+        # Execute probe recording
+        run_shell_cmd(cmd, silent=True)
+
+        if not os.path.isfile(probe_file) or os.path.getsize(probe_file) == 0:
+            return None
+
+        fps = detect_video_stream_framerate(probe_file)
+        try:
+            os.remove(probe_file)
+        except Exception:
+            pass
+        return fps
+    except Exception as e:
+        print(f"probe_source_stream error: {e}")
+        return None
+
+
 def screencast(waiting=False, silent=True, conversation=False,
                video_grabber="gdigrab", video_in='desktop',
                audio_grabber="dshow", audio_in="CABLE Output (VB-Audio Virtual Cable)",
                output_file=None,
-               crf=28, rec_time=None):
+               crf=28, rec_time=None, fps=60):
     """Wrap the screen recording program to make it useful and portable"""
 
     print(f"{waiting=} {silent=} {conversation=} {video_grabber=} {video_in=} \
-{audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=}")
+{audio_grabber=} {audio_in=} {output_file=} {crf=} {rec_time=} {fps=}")
 
     # Initialization
     result_ready = False
@@ -252,15 +368,15 @@ def screencast(waiting=False, silent=True, conversation=False,
             audio_param = f'-a "{audio_in}"'
         w_param = f'-w "{video_in}"' if video_in and video_in != '$DISPLAY' else '-w screen'
         portal_opt = '-restore-portal-session yes ' if video_in == 'portal' else ''
-        command = f'timeout -s INT {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f 60 {audio_param} -o "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f {fps} {audio_param} -o "{output_file}"'
     elif video_grabber == 'wf-recorder':
         audio_param = f'-a "{audio_in}"' if audio_in and audio_in not in ('', 'none') else '-a'
-        command = f'timeout -s INT {rec_time:5.1f}s wf-recorder {audio_param} -f "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s wf-recorder {audio_param} -r {fps} -f "{output_file}"'
     elif video_grabber == 'wl-screenrec':
         command = f'timeout -s INT {rec_time:5.1f}s wl-screenrec --audio --filename "{output_file}"'
     elif video_grabber == 'kmsgrab':
         command = ("ffmpeg -threads 4" +
-                   " -device /dev/dri/card0 -f kmsgrab -i -" +
+                   " -device /dev/dri/card0 -f kmsgrab -r {:d} -i -".format(int(fps)) +
                    " -f {:s}".format(audio_grabber) +
                    " -thread_queue_size 1024" +
                    " -i {:s}".format(audio_in) +
@@ -270,6 +386,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                    ' "{:s}"'.format(output_file))
     elif audio_grabber is None or audio_grabber == '':  # Darwin
         command = ("ffmpeg423 -threads 4" +
+                   " -framerate {:d}".format(int(fps)) +
                    " -f {:s}".format(video_grabber) +
                    " -probesize 42M" +
                    " -thread_queue_size 1024" +
@@ -281,6 +398,7 @@ def screencast(waiting=False, silent=True, conversation=False,
                    ' "{:s}"'.format(output_file))
     else:
         command = ("ffmpeg -threads 4" +
+                   " -framerate {:d}".format(int(fps)) +
                    " -f {:s}".format(video_grabber) +
                    " -probesize 42M" +
                    " -thread_queue_size 1024" +

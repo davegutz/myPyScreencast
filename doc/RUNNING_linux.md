@@ -18,7 +18,7 @@ python3 GUI_screencast.py
    - For **X11 sessions**, it defaults to `x11grab` with `$DISPLAY`.
    - Press **RECORD** to start the recording countdown. Fullscreen video can now be played.
    - Press **STOP** when done to finalize the recording.
-   - If needed, use the **Tuner** window to tune audio/video delay synchronization or clip snippets.
+   - If needed, use the **Tuner** window to tune audio/video delay synchronization, clip snippets, or discard beginning/end trimmings with **\*\*\* TRIM \*\*\***.
 
 #### To make the shortcut do the following:
    - Browse to `myPyScreencast`.
