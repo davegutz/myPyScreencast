@@ -534,15 +534,8 @@ def sync():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=raw_path.get(),
                              output_file=out_path.get())
-        sync_dest_path = os.path.join(destination_folder.get(), out_file.get())
         if size_of(out_path.get()) > 0:
-            if os.path.abspath(out_path.get()) != os.path.abspath(sync_dest_path):
-                try:
-                    shutil.move(out_path.get(), sync_dest_path)
-                    print("Moved synchronized result to ", sync_dest_path)
-                except FileNotFoundError:
-                    print(f"is Lib drive plugged in?????????")
-                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
+            print("Synchronized result is in ", out_path.get())
         update_file_paths()
     else:
         print("record first *******")
@@ -552,11 +545,11 @@ def trim():
     sync_dest_path = os.path.join(destination_folder.get(), out_file.get())
     source_file = None
     needs_sync = False
-    if size_of(sync_dest_path) > 0:
-        source_file = sync_dest_path
-        needs_sync = False
-    elif size_of(out_path.get()) > 0:
+    if size_of(out_path.get()) > 0:
         source_file = out_path.get()
+        needs_sync = False
+    elif size_of(sync_dest_path) > 0:
+        source_file = sync_dest_path
         needs_sync = False
     elif size_of(raw_path.get()) > 0:
         ans = tk.messagebox.askyesno(
@@ -565,10 +558,10 @@ def trim():
         )
         if ans:
             sync()
-            if size_of(sync_dest_path) > 0:
-                source_file = sync_dest_path
-            elif size_of(out_path.get()) > 0:
+            if size_of(out_path.get()) > 0:
                 source_file = out_path.get()
+            elif size_of(sync_dest_path) > 0:
+                source_file = sync_dest_path
             else:
                 return
         else:

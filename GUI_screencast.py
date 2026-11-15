@@ -407,9 +407,10 @@ class MyRecorder:
         self.run_perm = False
         self.countdown_time = countdown_time_
         self.smooth_fps = None
-        self.rec_fps = 60
+        self.rec_fps = 30
         self.interrupted_for_fps_mismatch = False
         self.detected_source_fps = None
+        self.completion_message_sent = False
 
     def __str__(self, prefix=''):
         s = prefix + "begini:\n"
@@ -517,6 +518,7 @@ class MyRecorder:
         else:
             self.thd_num += 1
             self.interrupted_for_fps_mismatch = False
+            self.completion_message_sent = False
             self.thread.append(FFmpegThread(silent.get(), self.thd_num))
             print('starting thread', self.thd_num, end='...')
             self.thread[self.thd_num].start()
@@ -525,6 +527,23 @@ class MyRecorder:
             if self.smooth_fps is None and self.rec_fps == 60:
                 thd = Thread(target=check_early_recording_framerate, daemon=True)
                 thd.start()
+
+    def send_completion_message(self):
+        """Send completion message via send_message if not already sent."""
+        if self.completion_message_sent:
+            return None
+        self.completion_message_sent = True
+        print('sending completion message')
+        check_path = self.target_path.get() if size_of(self.target_path.get()) > 0 else self.raw_path.get()
+        actual_len = length_of(check_path)
+        if actual_len is not None and abs(actual_len - rec_time.get()) < 1:
+            msg = 'target ready'
+        else:
+            print(f"record:  actual {actual_len} != demand {rec_time.get()}")
+            msg = 'Done but >1 min size difference'
+        thread = Thread(target=send_message, kwargs={'subject': self.title, 'message': msg})
+        thread.start()
+        return msg
 
     def kill(self, reason=None):
         if self.running is not None:
@@ -605,6 +624,7 @@ class FFmpegThread(Thread):
             thread = Thread(target=send_message, kwargs={'subject': R.title,
                 'message': end_time.strftime(" Target finishing ~%H:%M")})
             thread.start()
+            R.completion_message_sent = False
             rf, rr = screencast(silent=silent.get(),
                                 video_grabber=R.video_grab, video_in=R.video_in,
                                 audio_grabber=R.audio_grab, audio_in=R.audio_in,
@@ -624,18 +644,17 @@ class FFmpegThread(Thread):
             if rf and rr:
                 R.raw_path.set(rf)  # screencast may cause null filename if fails
                 R.new_result_ready.set(rr)
+                R.send_completion_message()
                 sync()
                 trim()
                 if size_of(R.target_path.get()) > 0:
                     root.lift()
-                    print('sending message')
-                    if abs(length_of(R.target_path.get()) - rec_time.get()) < 1:
+                    actual_len = length_of(R.target_path.get())
+                    if actual_len is not None and abs(actual_len - rec_time.get()) < 1:
                         msg = 'target ready'
                     else:
-                        print(f"record:  actual {length_of(R.target_path.get())} != demand {rec_time.get()}")
+                        print(f"record:  actual {actual_len} != demand {rec_time.get()}")
                         msg = 'Done but >1 min size difference'
-                    thread = Thread(target=send_message, kwargs={'subject': R.title, 'message': msg})
-                    thread.start()
                     press_exit_fullscreen_keys()
                     tk.messagebox.showinfo(title='Screencast', message=msg)
                     update_all_file_paths()
@@ -698,8 +717,8 @@ class FrameRateDecisionDialog(tk.Toplevel):
                   "The active video stream appears to be 24 fps content.\n")
         explanation = (
             f"{prefix}"
-            f"Recording at {current_fps} fps produces 3:2 pulldown judder ({current_fps}/{detected_fps:.0f} = {ratio:.1f}x),\n"
-            f"causing alternating 2-frame and 3-frame holds (motion stutter).\n\n"
+            f"Recording at {current_fps} fps produces download judder ({current_fps}/{detected_fps:.0f} = {ratio:.1f}x),\n"
+            f"causing alternating 2-frame and 3-frame holds (download judder).\n\n"
             f"How would you like to handle this recording?\n\n"
             f"• Auto-Smooth {detected_fps:.0f} fps (Recommended):\n"
             f"  Restart recording at 60 fps for smooth GPU capture, then automatically decimate\n"
@@ -1336,13 +1355,14 @@ def _check_and_prompt_sync_smoothing(raw_filepath, default_fps=None):
     detected = detect_video_stream_framerate(raw_filepath)
     print(f"sync: detected raw motion rate = {detected}")
     if detected and (20.0 <= detected <= 27.5):
+        R.send_completion_message()
         try:
             ans = tk.messagebox.askyesno(
-                title="Motion Stutter Detected (24 fps)",
+                title="Download Judder Detected (24 fps)",
                 message=(
                     f"Detected ~24 fps film/video content in this recording.\n\n"
-                    f"Because it was recorded at {container_fps:.0f} fps, 3:2 pulldown judder is present.\n\n"
-                    f"Would you like to Auto-Smooth it to 24 fps to eliminate stutter?"
+                    f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n\n"
+                    f"Would you like to Auto-Smooth it to 24 fps to eliminate download judder?"
                 ),
                 parent=root
             )
@@ -1351,12 +1371,14 @@ def _check_and_prompt_sync_smoothing(raw_filepath, default_fps=None):
         except Exception:
             pass
     elif detected and (27.5 < detected <= 35.0):
+        R.send_completion_message()
         try:
             ans = tk.messagebox.askyesno(
-                title="Motion Stutter Detected (30 fps)",
+                title="Download Judder Detected (30 fps)",
                 message=(
                     f"Detected ~30 fps video content in this recording.\n\n"
-                    f"Would you like to Auto-Smooth it to 30 fps to eliminate stutter?"
+                    f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n\n"
+                    f"Would you like to Auto-Smooth it to 30 fps to eliminate download judder?"
                 ),
                 parent=root
             )
@@ -1376,15 +1398,8 @@ def sync():
         else:
             delay_audio_sync(silent=silent.get(), delay=-video_delay.get(), input_file=R.raw_path.get(),
                              output_file=R.out_path, target_fps=target_fps, crf=crf.get())
-        sync_dest_path = os.path.join(R.destination_folder, R.out_file)
         if size_of(R.out_path) > 0:
-            if os.path.abspath(R.out_path) != os.path.abspath(sync_dest_path):
-                try:
-                    shutil.move(R.out_path, sync_dest_path)
-                    print("Moved synchronized result to ", sync_dest_path)
-                except FileNotFoundError:
-                    print(f"is Lib drive plugged in?????????")
-                    tk.messagebox.showinfo(title='ERROR', message='Is Lib drive plugged in?????????')
+            print("Synchronized result is in ", R.out_path)
         update_all_file_paths()
     else:
         print("record first *******")
@@ -1394,11 +1409,11 @@ def trim():
     sync_dest_path = os.path.join(R.destination_folder, R.out_file)
     source_file = None
     needs_sync = False
-    if size_of(sync_dest_path) > 0:
-        source_file = sync_dest_path
-        needs_sync = False
-    elif size_of(R.out_path) > 0:
+    if size_of(R.out_path) > 0:
         source_file = R.out_path
+        needs_sync = False
+    elif size_of(sync_dest_path) > 0:
+        source_file = sync_dest_path
         needs_sync = False
     elif size_of(R.raw_path.get()) > 0:
         ans = tk.messagebox.askyesno(
@@ -1407,10 +1422,10 @@ def trim():
         )
         if ans:
             sync()
-            if size_of(sync_dest_path) > 0:
-                source_file = sync_dest_path
-            elif size_of(R.out_path) > 0:
+            if size_of(R.out_path) > 0:
                 source_file = R.out_path
+            elif size_of(sync_dest_path) > 0:
+                source_file = sync_dest_path
             else:
                 return
         else:
