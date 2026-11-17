@@ -368,12 +368,12 @@ def screencast(waiting=False, silent=True, conversation=False,
             audio_param = f'-a "{audio_in}"'
         w_param = f'-w "{video_in}"' if video_in and video_in != '$DISPLAY' else '-w screen'
         portal_opt = '-restore-portal-session yes ' if video_in == 'portal' else ''
-        command = f'timeout -s INT {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f {fps} {audio_param} -o "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s {gsr_cmd} {portal_opt}{w_param} -f {fps} {audio_param} -ac aac -o "{output_file}"'
     elif video_grabber == 'wf-recorder':
         audio_param = f'-a "{audio_in}"' if audio_in and audio_in not in ('', 'none') else '-a'
-        command = f'timeout -s INT {rec_time:5.1f}s wf-recorder {audio_param} -r {fps} -f "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s wf-recorder {audio_param} -C aac -r {fps} -f "{output_file}"'
     elif video_grabber == 'wl-screenrec':
-        command = f'timeout -s INT {rec_time:5.1f}s wl-screenrec --audio --filename "{output_file}"'
+        command = f'timeout -s INT {rec_time:5.1f}s wl-screenrec --audio --audio-codec aac --filename "{output_file}"'
     elif video_grabber == 'kmsgrab':
         command = ("ffmpeg -threads 4" +
                    " -device /dev/dri/card0 -f kmsgrab -r {:d} -i -".format(int(fps)) +
