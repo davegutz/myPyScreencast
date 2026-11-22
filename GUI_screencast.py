@@ -891,11 +891,20 @@ def cast():
         test_cmd = "ffmpeg -sources pulse 2>/dev/null | grep output | grep Loopback | awk '{print $1}'"
         pulse_audio_loopback = run_shell_cmd(test_cmd, save_stdout=True, silent=True)
         if pulse_audio_loopback and pulse_audio_loopback != -1 and len(pulse_audio_loopback) > 0:
-            pulse_audio_loopback = pulse_audio_loopback[0].strip()
-            if pulse_audio_loopback and R.audio_in != pulse_audio_loopback:
-                print(f"{R.audio_in=}\n  not equal to \n{pulse_audio_loopback=}")
+            candidates = [line.strip() for line in pulse_audio_loopback if line and line.strip()]
+            if candidates and R.audio_in not in candidates:
+                suggested = candidates[0]
+                try:
+                    def_sink_res = run_shell_cmd("pactl get-default-sink 2>/dev/null", save_stdout=True, silent=True)
+                    if def_sink_res and def_sink_res != -1 and len(def_sink_res) > 0:
+                        def_monitor = f"{def_sink_res[0].strip()}.monitor"
+                        if def_monitor in candidates:
+                            suggested = def_monitor
+                except Exception:
+                    pass
+                print(f"{R.audio_in=}\n  not in detected loopbacks: {candidates}\n  suggesting: {suggested}")
                 print(f"To correct this copy and paste last line into next window or cancel to ignore")
-                R.enter_audio_in(pulse_audio_loopback)
+                R.enter_audio_in(suggested)
     confirmation = tk.messagebox.askokcancel('reminder', 'Have you turned on subtitles?')
     if confirmation is False:
         return
