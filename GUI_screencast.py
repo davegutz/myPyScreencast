@@ -407,7 +407,7 @@ class MyRecorder:
         self.run_perm = False
         self.countdown_time = countdown_time_
         self.smooth_fps = None
-        self.rec_fps = 30
+        self.rec_fps = 60
         self.interrupted_for_fps_mismatch = False
         self.detected_source_fps = None
         self.completion_message_sent = False
@@ -786,10 +786,25 @@ class FrameRateDecisionDialog(tk.Toplevel):
         self.wait_window(self)
 
 
+def show_non_blocking_message(title, message, parent=None, timeout_ms=6000):
+    """Display an informational notification window without blocking execution."""
+    def _create():
+        try:
+            top = tk.Toplevel(parent or root)
+            top.title(title)
+            top.attributes('-topmost', True)
+            tk.Label(top, text=message, padx=20, pady=15, font=("Helvetica", 10), justify="left").pack()
+            tk.Button(top, text="Dismiss", command=top.destroy, width=10).pack(pady=(0, 10))
+            if timeout_ms:
+                top.after(timeout_ms, lambda: top.destroy() if top.winfo_exists() else None)
+        except Exception:
+            pass
+    if root:
+        root.after(0, _create)
+
+
 def check_early_recording_framerate():
-    """Wait 3 seconds after recording begins, probe screen for 3.5s.
-    If 24/30 fps stream is detected with 60 fps recording, stop recording and prompt user.
-    """
+    """Wait 3 seconds after recording begins, probe screen for 3.5s to update UI framerate."""
     time.sleep(3.0)
     if not R.running or not R.run_perm or R.smooth_fps is not None:
         return
@@ -799,88 +814,16 @@ def check_early_recording_framerate():
     print(f"Early check: detected motion fps = {detected}")
     R.detected_source_fps = detected
 
-    if not R.running or not R.run_perm or R.smooth_fps is not None:
-        return
-
-    if detected and (20.0 <= detected <= 27.5 or 27.5 < detected <= 35.0):
-        target_fps = 24 if (20.0 <= detected <= 27.5) else 30
-        print(f"Early check: FPS mismatch detected (~{target_fps} fps stream on {R.rec_fps} fps capture). Stopping recording!")
-        root.after(0, lambda: _handle_early_fps_mismatch(target_fps))
-
-
-def _handle_early_fps_mismatch(target_fps):
-    if not R.running and not R.run_perm:
-        return
-    R.interrupted_for_fps_mismatch = True
-    R.kill(reason='fps_mismatch')
-    press_exit_fullscreen_keys()
-    root.lift()
-    root.focus_force()
-
-    dlg = FrameRateDecisionDialog(root, detected_fps=target_fps, current_fps=R.rec_fps, was_stopped=True)
-    choice = dlg.result
-
-    if choice == 'auto_smooth':
-        R.smooth_fps = target_fps
-        R.rec_fps = 60
-        print(f"FPS Mismatch resolved: Auto-Smooth {target_fps} fps chosen. Restarting recording...")
-        R.cast_button.config(bg=bg_color)
-        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
-        R.run_perm = True
-        countdown_time.set(min(R.countdown_time, 5))
-        cast_countdown()
-    elif choice == 'native_fps':
-        R.smooth_fps = None
-        R.rec_fps = target_fps
-        print(f"FPS Mismatch resolved: Native {target_fps} fps chosen. Restarting recording...")
-        R.cast_button.config(bg=bg_color)
-        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
-        R.run_perm = True
-        countdown_time.set(min(R.countdown_time, 5))
-        cast_countdown()
-    elif choice == 'keep_60':
-        R.smooth_fps = 'keep_60'
-        R.rec_fps = 60
-        print("FPS Mismatch resolved: User chose to keep 60 fps raw. Restarting recording...")
-        R.cast_button.config(bg=bg_color)
-        R.stop_button.config(bg='black', activebackground='black', fg='white', activeforeground='white')
-        R.run_perm = True
-        countdown_time.set(min(R.countdown_time, 5))
-        cast_countdown()
-    else:
-        print("Recording stopped by user after framerate mismatch.")
-
 
 def probe_and_prompt_framerate(video_grab, video_in, parent=None):
-    """Probe the screen for ~3.5s, detect content framerate, and prompt user if 24 fps / 30 fps judder is likely.
+    """Probe the screen for ~3.5s to detect content framerate for display panel.
     Returns: (smooth_fps, rec_fps, should_proceed)
     """
     print("Probing active video stream for ~3.5 seconds...")
     detected_fps = probe_source_stream(video_grab, video_in)
     print(f"probe_source_stream: detected motion fps = {detected_fps}")
     R.detected_source_fps = detected_fps
-    if detected_fps is None:
-        return None, 60, True
-
-    if 20.0 <= detected_fps <= 27.5:
-        target_stream_fps = 24
-    elif 27.5 < detected_fps <= 35.0:
-        target_stream_fps = 30
-    else:
-        # 60 fps or mostly static desktop
-        return None, 60, True
-
-    dlg = FrameRateDecisionDialog(parent or root, detected_fps=target_stream_fps, current_fps=60)
-    choice = dlg.result
-
-    if choice == 'auto_smooth':
-        return target_stream_fps, 60, True
-    elif choice == 'keep_60':
-        return None, 60, True
-    elif choice == 'native_fps':
-        return None, target_stream_fps, True
-    else:
-        return None, 60, False
+    return None, 60, True
 
 
 def cast():
@@ -1365,36 +1308,22 @@ def _check_and_prompt_sync_smoothing(raw_filepath, default_fps=None):
     print(f"sync: detected raw motion rate = {detected}")
     if detected and (20.0 <= detected <= 27.5):
         R.send_completion_message()
-        try:
-            ans = tk.messagebox.askyesno(
-                title="Download Judder Detected (24 fps)",
-                message=(
-                    f"Detected ~24 fps film/video content in this recording.\n\n"
-                    f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n\n"
-                    f"Would you like to Auto-Smooth it to 24 fps to eliminate download judder?"
-                ),
-                parent=root
-            )
-            if ans:
-                return 24
-        except Exception:
-            pass
+        msg = (
+            f"Detected ~24 fps film/video content in this recording.\n\n"
+            f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n"
+            f"movie_Scraper will detect and resolve this during library resampling."
+        )
+        print(f"sync: Download judder detected (~24 fps in {container_fps:.0f} fps container).")
+        show_non_blocking_message("Download Judder Detected (24 fps)", msg, parent=root)
     elif detected and (27.5 < detected <= 35.0):
         R.send_completion_message()
-        try:
-            ans = tk.messagebox.askyesno(
-                title="Download Judder Detected (30 fps)",
-                message=(
-                    f"Detected ~30 fps video content in this recording.\n\n"
-                    f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n\n"
-                    f"Would you like to Auto-Smooth it to 30 fps to eliminate download judder?"
-                ),
-                parent=root
-            )
-            if ans:
-                return 30
-        except Exception:
-            pass
+        msg = (
+            f"Detected ~30 fps video content in this recording.\n\n"
+            f"Because it was recorded at {container_fps:.0f} fps, download judder is present.\n"
+            f"movie_Scraper will detect and resolve this during library resampling."
+        )
+        print(f"sync: Download judder detected (~30 fps in {container_fps:.0f} fps container).")
+        show_non_blocking_message("Download Judder Detected (30 fps)", msg, parent=root)
     return None
 
 
